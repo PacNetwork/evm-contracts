@@ -204,6 +204,9 @@ contract MMFVault is
         if (currentPrice == 0) revert InvalidPrice();
         if (currentPrice > lastPrice) {
             uint256 balance = mmfToken.balanceOf(address(this));
+            if (balance == 0) {
+                revert ZeroBalance();
+            }
             uint256 priceDifference = currentPrice - lastPrice;
             uint256 rewardAmount = (priceDifference * balance) /
                 mmfTokenDecimals;
@@ -213,5 +216,4 @@ contract MMFVault is
             emit RewardMinted(address(staking), rewardAmount);
         }
     }
-
 }

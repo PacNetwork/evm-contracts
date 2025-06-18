@@ -311,15 +311,6 @@ describe("MMFVault", () => {
           TIMESTAMP
         )
       ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
-      // .to.emit(MMFVault, "RewardMinted")
-      // .to.emit(MMFVault, "MintPacUSD")
-      // .withArgs(
-      //   txId,
-      //   user2.address,
-      //   TIMESTAMP,
-      //   MMF_AMOUNT,
-      //   parseEther("300")
-      // ); // 100 MMF * 3
     });
 
     it("should revert if amount is zero", async () => {
@@ -359,7 +350,10 @@ describe("MMFVault", () => {
     });
 
     it("should revert on share calculation overflow", async () => {
-      await Pricer.setPrice(ethers.MaxUint256);
+      await MMFToken.mint(MMFVault.target, parseEther("10"));
+
+      await Pricer.setPrice(ethers.MaxUint256 / parseEther("10"));
+
       const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
 
       await PacUSD.connect(owner).setMintByTx(txId);
@@ -515,7 +509,7 @@ describe("MMFVault", () => {
   });
 
   describe("mintReward", () => {
-    beforeEach(async () => {
+    it("should mint rewards when price increases", async () => {
       const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
       await PacUSD.connect(owner).setMintByTx(txId);
       await MMFVault.connect(user1).mintPacUSD(
@@ -524,9 +518,7 @@ describe("MMFVault", () => {
         user2.address,
         TIMESTAMP
       );
-    });
 
-    it("should mint rewards when price increases", async () => {
       await Pricer.setPrice(parseEther("3")); // lastPrice = 2, currentPrice = 3
       await expect(MMFVault.mintReward())
         .to.emit(MMFVault, "RewardMinted")
@@ -543,14 +535,31 @@ describe("MMFVault", () => {
     });
 
     it("should revert if price is zero", async () => {
-      await Pricer.setPrice(0);
+      await Pricer.setPrice(parseEther("0"));
       await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
         MMFVault,
         "InvalidPrice"
       );
     });
 
+    it("should revert if mmfVault balance is zero", async () => {
+      await Pricer.setPrice(parseEther("3"));
+      await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
+        MMFVault,
+        "ZeroBalance"
+      );
+    });
+
     it("should revert on share calculation overflow", async () => {
+      const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
+      await PacUSD.connect(owner).setMintByTx(txId);
+      await MMFVault.connect(user1).mintPacUSD(
+        txId,
+        MMF_AMOUNT,
+        user2.address,
+        TIMESTAMP
+      );
+
       await Pricer.setPrice(ethers.MaxUint256);
       await expect(MMFVault.mintReward()).to.be.revertedWithPanic("0x11");
     });

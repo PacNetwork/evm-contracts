@@ -11,6 +11,7 @@ interface IMMFVault {
     error InvalidTxId();
     error ZeroAddress();
     error ZeroAmount();
+    error ZeroBalance();
     error InvalidPrice();
 
     // Events
