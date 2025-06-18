@@ -108,7 +108,6 @@ async function main() {
   await pacUSD.grantRole(await pacUSD.BLACKLISTER_ROLE(), blackListerAddress);
   await pacUSD.grantRole(await pacUSD.RESCUER_ROLE(), resuerAddress);
   await pacUSD.grantRole(await pacUSD.APPROVER_ROLE(), approverAddress);
-  await mmfVault.grantRole(await mmfVault.PAUSER_ROLE(), pauserAddress);
 
   console.log("\n\nDeployment completed!");
 }

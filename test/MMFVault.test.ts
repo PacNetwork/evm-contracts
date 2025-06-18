@@ -96,11 +96,6 @@ describe("MMFVault", () => {
 
     await MMFVault.waitForDeployment();
 
-    await MMFVault.connect(owner).grantRole(
-      await MMFVault.PAUSER_ROLE(),
-      owner.address
-    );
-
     // Initialize PacUSD with MMFVault as minter
     await PacUSD.initialize(owner.address, admin.address, [MMFVault.target]);
 
@@ -125,9 +120,6 @@ describe("MMFVault", () => {
       expect(await MMFVault.mmfToken()).to.equal(MMFToken.target);
       expect(await MMFVault.pacUSDToken()).to.equal(PacUSD.target);
       expect(await MMFVault.pricer()).to.equal(Pricer.target);
-      expect(
-        await MMFVault.hasRole(await MMFVault.PAUSER_ROLE(), owner.address)
-      ).to.be.true;
       expect(
         await MMFVault.hasRole(
           await MMFVault.DEFAULT_ADMIN_ROLE(),
@@ -568,77 +560,6 @@ describe("MMFVault", () => {
       await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
         MMFVault,
         "EnforcedPause"
-      );
-    });
-  });
-  describe("Role Management", function () {
-    it("should allow owner to grant roles", async function () {
-      await MMFVault.connect(owner).grantRole(
-        await MMFVault.PAUSER_ROLE(),
-        user1.address
-      );
-      expect(
-        await MMFVault.hasRole(await MMFVault.PAUSER_ROLE(), user1.address)
-      ).to.be.true;
-    });
-
-    it("should revert if granting role to zero address", async function () {
-      await expect(
-        MMFVault.connect(owner).grantRole(
-          await MMFVault.PAUSER_ROLE(),
-          ZERO_ADDRESS
-        )
-      ).to.be.revertedWithCustomError(MMFVault, "ZeroAddress");
-    });
-
-    it("should revert if non-role-admin tries to grant role", async function () {
-      await expect(
-        MMFVault.connect(user1).grantRole(
-          await MMFVault.PAUSER_ROLE(),
-          user2.address
-        )
-      ).to.be.revertedWithCustomError(
-        MMFVault,
-        "AccessControlUnauthorizedAccount"
-      );
-    });
-
-    it("should allow owner to revoke roles", async function () {
-      await MMFVault.connect(owner).grantRole(
-        await MMFVault.PAUSER_ROLE(),
-        user1.address
-      );
-      await MMFVault.connect(owner).revokeRole(
-        await MMFVault.PAUSER_ROLE(),
-        user1.address
-      );
-      expect(
-        await MMFVault.hasRole(await MMFVault.PAUSER_ROLE(), user1.address)
-      ).to.be.false;
-    });
-
-    it("should revert if revoking role from zero address", async function () {
-      await expect(
-        MMFVault.connect(owner).revokeRole(
-          await MMFVault.PAUSER_ROLE(),
-          ZERO_ADDRESS
-        )
-      ).to.be.revertedWithCustomError(MMFVault, "ZeroAddress");
-    });
-
-    it("should revert if non-role-admin tries to revoke role", async function () {
-      await MMFVault.connect(owner).grantRole(
-        await MMFVault.PAUSER_ROLE(),
-        user1.address
-      );
-      await expect(
-        MMFVault.connect(user2).revokeRole(
-          await MMFVault.PAUSER_ROLE(),
-          user1.address
-        )
-      ).to.be.revertedWithCustomError(
-        MMFVault,
-        "AccessControlUnauthorizedAccount"
       );
     });
   });

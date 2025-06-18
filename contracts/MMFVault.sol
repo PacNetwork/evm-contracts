@@ -31,9 +31,6 @@ contract MMFVault is
 {
     using SafeERC20 for IERC20;
 
-    // Role definitions
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-
     // Token and pricer contracts
     IERC20 public mmfToken;
     IERC20 public pacUSDToken;
@@ -102,7 +99,7 @@ contract MMFVault is
      * @notice Pauses the contract
      * @dev Only callable by pauser role
      */
-    function pause() external onlyRole(PAUSER_ROLE) {
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
@@ -110,7 +107,7 @@ contract MMFVault is
      * @notice Unpauses the contract
      * @dev Only callable by pauser role
      */
-    function unpause() external onlyRole(PAUSER_ROLE) {
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 
@@ -217,33 +214,4 @@ contract MMFVault is
         }
     }
 
-    /**
-     * @notice Grants a role to an account.
-     * @dev Overrides AccessControl grantRole to include a zero address check. Only callable by the role admin.
-     *      Emits a RoleGranted event.
-     * @param role The role to grant.
-     * @param account The address to receive the role.
-     */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public override onlyRole(getRoleAdmin(role)) {
-        if (account == address(0)) revert ZeroAddress();
-        _grantRole(role, account);
-    }
-
-    /**
-     * @notice Revokes a role from an account.
-     * @dev Overrides AccessControl revokeRole to include a zero address check. Only callable by the role admin.
-     *      Emits a RoleRevoked event.
-     * @param role The role to revoke.
-     * @param account The address to remove the role from.
-     */
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) public override onlyRole(getRoleAdmin(role)) {
-        if (account == address(0)) revert ZeroAddress();
-        _revokeRole(role, account);
-    }
 }
