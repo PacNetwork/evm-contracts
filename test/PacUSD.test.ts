@@ -56,7 +56,6 @@ describe("PacUSD", function () {
     await pacUSD.grantRole(await pacUSD.BLACKLISTER_ROLE(), owner.address);
     await pacUSD.grantRole(await pacUSD.APPROVER_ROLE(), owner.address);
     await pacUSD.grantRole(await pacUSD.RESCUER_ROLE(), owner.address);
-    
   });
 
   describe("Initialization", function () {
@@ -80,14 +79,13 @@ describe("PacUSD", function () {
         .to.be.true;
     });
 
-
     it("should skip zero address minters during initialization", async function () {
       const PacUSD = (await ethers.getContractFactory(
         "PacUSD"
       )) as PacUSD__factory;
       const newPacUSD = (await upgrades.deployProxy(
         PacUSD,
-        [owner.address,admin.address, [minter.address, ZERO_ADDRESS]],
+        [owner.address, admin.address, [minter.address, ZERO_ADDRESS]],
         {
           initializer: "initialize",
           kind: "uups",
@@ -556,6 +554,15 @@ describe("PacUSD", function () {
       expect(await pacUSD.allowance(user1.address, user2.address)).to.equal(0);
     });
 
+    it("should revert if transferFrom balance more than allowance", async function () {
+      await pacUSD.connect(user1).approve(user2.address, AMOUNT / BigInt(2));
+      await expect(
+        pacUSD.connect(user2).transferFrom(user1.address, user2.address, AMOUNT)
+      )
+        .to.be.revertedWithCustomError(pacUSD, "ERC20InsufficientAllowance")
+        .withArgs(user2.address, AMOUNT / BigInt(2), AMOUNT);
+    });
+
     it("should revert if transfer from blacklisted sender", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
@@ -655,18 +662,13 @@ describe("PacUSD", function () {
       await pacUSD.connect(minter).mintByTx(TX_ID, AMOUNT, user1.address);
     });
 
-
     it("should allow rescuer to rescue tokens from contract itself", async function () {
       await pacUSD.connect(owner).setMintByTx(TX_ID_2);
       await pacUSD.connect(minter).mintByTx(TX_ID_2, AMOUNT, pacUSD.target);
       await pacUSD
         .connect(owner)
         .grantRole(await pacUSD.RESCUER_ROLE(), rescuer.address);
-      await expect(
-        pacUSD
-          .connect(rescuer)
-          .rescueTokens(user2.address, AMOUNT)
-      )
+      await expect(pacUSD.connect(rescuer).rescueTokens(user2.address, AMOUNT))
         .to.emit(pacUSD, "TokensRescued")
         .withArgs(user2.address, AMOUNT);
       expect(await pacUSD.balanceOf(pacUSD.target)).to.equal(0);
@@ -682,7 +684,6 @@ describe("PacUSD", function () {
       );
     });
 
-
     it("should revert if rescuing to zero address", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
@@ -693,25 +694,21 @@ describe("PacUSD", function () {
     it("should revert if rescuing zero amount", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD
-          .connect(owner)
-          .rescueTokens( user2.address, ZERO_AMOUNT)
+        pacUSD.connect(owner).rescueTokens(user2.address, ZERO_AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAmount");
     });
 
     it("should revert if rescuing more than balance", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD
-          .connect(owner)
-          .rescueTokens(user2.address, AMOUNT + 1n)
+        pacUSD.connect(owner).rescueTokens(user2.address, AMOUNT + 1n)
       ).to.be.revertedWithCustomError(pacUSD, "InsufficientBalance");
     });
   });
 
   describe("UUPS Upgradeability", function () {
     it("should allow admin to authorize upgrade", async function () {
-      const PacUSDV2 = await ethers.getContractFactory("PacUSD",admin);
+      const PacUSDV2 = await ethers.getContractFactory("PacUSD", admin);
       await expect(
         upgrades.upgradeProxy(pacUSD.target, PacUSDV2, { kind: "uups" })
       ).to.not.be.reverted;
@@ -721,10 +718,7 @@ describe("PacUSD", function () {
       const PacUSDV2 = await ethers.getContractFactory("PacUSD", user1);
       await expect(
         upgrades.upgradeProxy(pacUSD.target, PacUSDV2, { kind: "uups" })
-      ).to.be.revertedWithCustomError(
-        pacUSD,
-        "OwnableUnauthorizedAccount"
-      );
+      ).to.be.revertedWithCustomError(pacUSD, "OwnableUnauthorizedAccount");
     });
   });
 });
