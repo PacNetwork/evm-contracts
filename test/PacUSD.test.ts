@@ -655,21 +655,6 @@ describe("PacUSD", function () {
       await pacUSD.connect(minter).mintByTx(TX_ID, AMOUNT, user1.address);
     });
 
-    it("should allow rescuer to rescue tokens from blacklisted account", async function () {
-      await pacUSD
-        .connect(owner)
-        .grantRole(await pacUSD.RESCUER_ROLE(), rescuer.address);
-      await pacUSD.connect(owner).blacklist(user1.address);
-      await expect(
-        pacUSD
-          .connect(rescuer)
-          .rescueTokens(user1.address, user2.address, AMOUNT)
-      )
-        .to.emit(pacUSD, "TokensRescued")
-        .withArgs(user1.address, user2.address, AMOUNT);
-      expect(await pacUSD.balanceOf(user1.address)).to.equal(0);
-      expect(await pacUSD.balanceOf(user2.address)).to.equal(AMOUNT);
-    });
 
     it("should allow rescuer to rescue tokens from contract itself", async function () {
       await pacUSD.connect(owner).setMintByTx(TX_ID_2);
@@ -680,34 +665,28 @@ describe("PacUSD", function () {
       await expect(
         pacUSD
           .connect(rescuer)
-          .rescueTokens(pacUSD.target, user2.address, AMOUNT)
+          .rescueTokens(user2.address, AMOUNT)
       )
         .to.emit(pacUSD, "TokensRescued")
-        .withArgs(pacUSD.target, user2.address, AMOUNT);
+        .withArgs(user2.address, AMOUNT);
       expect(await pacUSD.balanceOf(pacUSD.target)).to.equal(0);
       expect(await pacUSD.balanceOf(user2.address)).to.equal(AMOUNT);
     });
 
     it("should revert if non-rescuer tries to rescue tokens", async function () {
-      await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD.connect(user1).rescueTokens(user1.address, user2.address, AMOUNT)
+        pacUSD.connect(user1).rescueTokens(user2.address, AMOUNT)
       ).to.be.revertedWithCustomError(
         pacUSD,
         "AccessControlUnauthorizedAccount"
       );
     });
 
-    it("should revert if rescuing from non-blacklisted account (not contract)", async function () {
-      await expect(
-        pacUSD.connect(owner).rescueTokens(user1.address, user2.address, AMOUNT)
-      ).to.be.revertedWithCustomError(pacUSD, "InvalidRescueSource");
-    });
 
     it("should revert if rescuing to zero address", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD.connect(owner).rescueTokens(user1.address, ZERO_ADDRESS, AMOUNT)
+        pacUSD.connect(owner).rescueTokens(ZERO_ADDRESS, AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
@@ -716,8 +695,8 @@ describe("PacUSD", function () {
       await expect(
         pacUSD
           .connect(owner)
-          .rescueTokens(user1.address, user2.address, ZERO_AMOUNT)
-      ).to.be.revertedWithCustomError(pacUSD, "InsufficientBalance");
+          .rescueTokens( user2.address, ZERO_AMOUNT)
+      ).to.be.revertedWithCustomError(pacUSD, "ZeroAmount");
     });
 
     it("should revert if rescuing more than balance", async function () {
@@ -725,7 +704,7 @@ describe("PacUSD", function () {
       await expect(
         pacUSD
           .connect(owner)
-          .rescueTokens(user1.address, user2.address, AMOUNT + 1n)
+          .rescueTokens(user2.address, AMOUNT + 1n)
       ).to.be.revertedWithCustomError(pacUSD, "InsufficientBalance");
     });
   });

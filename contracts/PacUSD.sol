@@ -265,47 +265,29 @@ contract PacUSD is
     }
 
     /**
-     * @notice Rescues tokens from a blacklisted account or the contract itself.
+     * @notice Rescues tokens held by the contract itself to a specified recipient.
      * @dev Only callable by an account with RESCUER_ROLE, with reentrancy protection.
-     *      Reverts if the recipient is the zero address, the amount is zero, the source is not blacklisted
-     *      (unless it's the contract itself), or the source has insufficient balance.
-     *      Emits a TokensRescued event.
-     * @param from The address to rescue tokens from (contract or blacklisted account).
+     *      Reverts if:
+     *      - The recipient is the zero address (`ZeroAddress`).
+     *      - The amount is zero (`ZeroAmount`).
+     *      - The recipient is blacklisted (`BlacklistedRecipient`).
+     *      - The contract has insufficient balance (`InsufficientBalance`).
+     *      Uses `_transfer` to move tokens and emits a `TokensRescued(address to, uint256 amount)` event.
      * @param to The address to receive the rescued tokens.
      * @param amount The amount of tokens to rescue.
      */
     function rescueTokens(
-        address from,
         address to,
         uint256 amount
     ) external onlyRole(RESCUER_ROLE) nonReentrant {
         if (to == address(0)) revert ZeroAddress();
-        if (amount == 0) revert InsufficientBalance();
-        if (from != address(this) && !isBlacklisted(from))
-            revert InvalidRescueSource();
+        if (amount == 0) revert ZeroAmount();
         if (isBlacklisted(to)) revert BlacklistedRecipient();
+        if (balanceOf(address(this)) < amount) revert InsufficientBalance();
 
-        if (balanceOf(from) < amount) revert InsufficientBalance();
+        _transfer(address(this), to, amount);
 
-        if (from == address(this)) {
-            _transfer(address(this), to, amount);
-        } else {
-            _forceTransfer(from, to, amount);
-        }
-
-        emit TokensRescued(from, to, amount);
-    }
-
-    /**
-     * @notice Internal function to forcibly transfer tokens from one account to another.
-     * @dev Bypasses standard transfer checks, used for rescuing tokens from blacklisted accounts.
-     *      Updates token balances directly via _update.
-     * @param from The address to transfer tokens from.
-     * @param to The address to transfer tokens to.
-     * @param amount The amount of tokens to transfer.
-     */
-    function _forceTransfer(address from, address to, uint256 amount) internal {
-        _update(from, to, amount);
+        emit TokensRescued(to, amount);
     }
 
     /**
@@ -383,4 +365,5 @@ contract PacUSD is
     function isMinter(address account) public view returns (bool) {
         return _minters[account];
     }
+
 }

@@ -15,13 +15,14 @@ interface IPacUSD {
     error InvalidRescueSource();
     error NotMinter();
     error TxIdInvalid();
+    error ZeroAmount();
 
     // Event definitions
     event Mint(address indexed to, uint256 amount);
     event Burn(address indexed from, uint256 amount);
     event Blacklisted(address indexed account);
     event Unblacklisted(address indexed account);
-    event TokensRescued(address indexed from, address indexed to, uint256 amount);
+    event TokensRescued(address indexed to, uint256 amount);
     event MintTxSet(bytes32 indexed txId);
     event MintTxCancelled(bytes32 indexed txId);
     event BurnTxSet(bytes32 indexed txId);
@@ -116,14 +117,13 @@ interface IPacUSD {
      */
     function mintReward(uint256 amount, address to) external;
 
-    /**
-     * @notice Rescues tokens from a blacklisted account or the contract itself
-     * @dev Only callable by accounts with RESCUER_ROLE, with reentrancy guard
-     * @param from The address to rescue tokens from (contract or blacklisted account)
-     * @param to The address to receive rescued tokens
-     * @param amount The amount of tokens to rescue
+     /**
+     * @notice Rescues tokens held by the contract itself to a specified recipient.
+     * @dev Only callable by an account with RESCUER_ROLE, with reentrancy protection.
+     * @param to The address to receive the rescued tokens.
+     * @param amount The amount of tokens to rescue.
      */
-    function rescueTokens(address from, address to, uint256 amount) external;
+    function rescueTokens(address to, uint256 amount) external;
 
     /**
      * @notice Checks if an account has minter privileges
