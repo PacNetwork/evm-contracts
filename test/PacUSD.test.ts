@@ -668,7 +668,7 @@ describe("PacUSD", function () {
       await pacUSD
         .connect(owner)
         .grantRole(await pacUSD.RESCUER_ROLE(), rescuer.address);
-      await expect(pacUSD.connect(rescuer).rescueTokens(user2.address, AMOUNT))
+      await expect(pacUSD.connect(rescuer).rescueTokens(pacUSD.target, user2.address, AMOUNT))
         .to.emit(pacUSD, "TokensRescued")
         .withArgs(user2.address, AMOUNT);
       expect(await pacUSD.balanceOf(pacUSD.target)).to.equal(0);
@@ -677,7 +677,7 @@ describe("PacUSD", function () {
 
     it("should revert if non-rescuer tries to rescue tokens", async function () {
       await expect(
-        pacUSD.connect(user1).rescueTokens(user2.address, AMOUNT)
+        pacUSD.connect(user1).rescueTokens(pacUSD.target,user2.address, AMOUNT)
       ).to.be.revertedWithCustomError(
         pacUSD,
         "AccessControlUnauthorizedAccount"
@@ -687,21 +687,21 @@ describe("PacUSD", function () {
     it("should revert if rescuing to zero address", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD.connect(owner).rescueTokens(ZERO_ADDRESS, AMOUNT)
+        pacUSD.connect(owner).rescueTokens(pacUSD.target,ZERO_ADDRESS, AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
     it("should revert if rescuing zero amount", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD.connect(owner).rescueTokens(user2.address, ZERO_AMOUNT)
+        pacUSD.connect(owner).rescueTokens(pacUSD.target,user2.address, ZERO_AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAmount");
     });
 
     it("should revert if rescuing more than balance", async function () {
       await pacUSD.connect(owner).blacklist(user1.address);
       await expect(
-        pacUSD.connect(owner).rescueTokens(user2.address, AMOUNT + 1n)
+        pacUSD.connect(owner).rescueTokens(pacUSD.target,user2.address, AMOUNT + 1n)
       ).to.be.revertedWithCustomError(pacUSD, "InsufficientBalance");
     });
   });

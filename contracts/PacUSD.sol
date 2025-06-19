@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
-
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -27,6 +27,7 @@ contract PacUSD is
     UUPSUpgradeable,
     IPacUSD
 {
+    using SafeERC20 for IERC20;
     // Role definitions
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant BLACKLISTER_ROLE = keccak256("BLACKLISTER_ROLE");
@@ -64,14 +65,13 @@ contract PacUSD is
         address adminAddress,
         address[] memory minters
     ) public initializer {
-
         __ERC20_init("PAC USD Stablecoin", "PacUSD");
         __ERC20Permit_init("PAC USD Stablecoin");
         __ReentrancyGuard_init();
         __Pausable_init();
         __AccessControl_init();
         __UUPSUpgradeable_init();
-         __Ownable_init(adminAddress);
+        __Ownable_init(adminAddress);
         // Set up roles
         _grantRole(DEFAULT_ADMIN_ROLE, ownerAddress);
 
@@ -83,7 +83,6 @@ contract PacUSD is
         }
     }
 
-  
     /**
      * @dev Modifier that only minter can call
      */
@@ -265,18 +264,30 @@ contract PacUSD is
     }
 
     /**
-     * @notice Rescues tokens held by the contract itself to a specified recipient.
-     * @dev Only callable by an account with RESCUER_ROLE, with reentrancy protection.
-     *      Reverts if:
-     *      - The recipient is the zero address (`ZeroAddress`).
-     *      - The amount is zero (`ZeroAmount`).
-     *      - The recipient is blacklisted (`BlacklistedRecipient`).
-     *      - The contract has insufficient balance (`InsufficientBalance`).
-     *      Uses `_transfer` to move tokens and emits a `TokensRescued(address to, uint256 amount)` event.
-     * @param to The address to receive the rescued tokens.
-     * @param amount The amount of tokens to rescue.
+     * @dev Emergency withdrawal of tokens held by the contract, designed to handle exceptional
+     * situations such as tokens being locked or stuck. This method can only be called by
+     * addresses with the RESCUER_ROLE and prevents transfers to blacklisted addresses.
+     *
+     * @param tokenContract The address of the token contract to be rescued
+     * @param to The recipient address for the tokens
+     * @param amount The amount of tokens to rescue
+     *
+     * @notice This function is for emergency use only and may result in funds being transferred
+     * from the contract to the specified address. Exercise caution when invoking.
+     *
+     * @custom:security This method is protected by role-based access control and reentrancy guards.
+     * Callers must ensure transfers comply with the project's governance policies.
+     *
+     * Requirements:
+     * - Caller must have the RESCUER_ROLE.
+     * - Recipient address cannot be the zero address.
+     * - Amount must be greater than zero.
+     * - Recipient address must not be blacklisted.
+     *
+     * Emits a {TokensRescued} event upon successful execution.
      */
     function rescueTokens(
+        IERC20 tokenContract,
         address to,
         uint256 amount
     ) external onlyRole(RESCUER_ROLE) nonReentrant {
@@ -284,9 +295,7 @@ contract PacUSD is
         if (amount == 0) revert ZeroAmount();
         if (isBlacklisted(to)) revert BlacklistedRecipient();
         if (balanceOf(address(this)) < amount) revert InsufficientBalance();
-
-        _transfer(address(this), to, amount);
-
+        tokenContract.safeTransfer(to, amount);
         emit TokensRescued(to, amount);
     }
 
@@ -365,5 +374,4 @@ contract PacUSD is
     function isMinter(address account) public view returns (bool) {
         return _minters[account];
     }
-
 }
