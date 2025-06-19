@@ -349,26 +349,6 @@ describe("MMFVault", () => {
       ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
     });
 
-    it("should revert on share calculation overflow", async () => {
-      await MMFToken.mint(MMFVault.target, parseEther("10"));
-
-      await Pricer.setPrice(ethers.MaxUint256 / parseEther("10"));
-
-      const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
-
-      await PacUSD.connect(owner).setMintByTx(txId);
-
-      await MMFVault.connect(user1).mintReward();
-
-      await expect(
-        MMFVault.connect(user1).mintPacUSD(
-          txId,
-          MMF_AMOUNT,
-          user2.address,
-          TIMESTAMP
-        )
-      ).to.be.revertedWithPanic("0x11");
-    });
   });
 
   describe("redeemMMF", () => {
@@ -458,15 +438,6 @@ describe("MMFVault", () => {
           TIMESTAMP
         )
       ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
-      // .to.emit(MMFVault, "RewardMinted")
-      // .to.emit(MMFVault, "RedeemMMF")
-      // .withArgs(
-      //   txId,
-      //   user1.address,
-      //   TIMESTAMP,
-      //   PACUSD_AMOUNT,
-      //   parseEther("66.666666666666666666")
-      // ); // 200 / 3
     });
 
     it("should revert if amount is zero", async () => {

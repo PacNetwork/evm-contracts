@@ -42,6 +42,8 @@ contract MMFVault is
     // Last recorded price for reward calculation
     uint256 public lastPrice;
     uint256 mmfTokenDecimals;
+    uint256 pacUSDDecimals;
+    uint256 public constant PRICER_DECIMALS = 18;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -79,10 +81,10 @@ contract MMFVault is
         __Pausable_init();
 
         mmfToken = IERC20(mmfTokenAddress);
-        mmfTokenDecimals = 10 ** ERC20(mmfTokenAddress).decimals();
+        mmfTokenDecimals = ERC20(mmfTokenAddress).decimals();
         pacUSDToken = IERC20(pacUSDTokenAddress);
         pacUSD = IPacUSD(pacUSDTokenAddress);
-
+        pacUSDDecimals = ERC20(pacUSDTokenAddress).decimals();
         pricer = IPricer(pricerAddress);
         staking = IStaking(stakingAddress);
         lastPrice = pricer.getLatestPrice();
@@ -145,7 +147,8 @@ contract MMFVault is
         if (price != lastPrice) revert InvalidPrice();
 
         // Calculate PacUSD amount (1 MMF = price PacUSD)
-        uint256 pacUSDAmount = (amount * price) / mmfTokenDecimals;
+        uint256 pacUSDAmount = (amount * price * 10 ** pacUSDDecimals) /
+            (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
 
         mmfToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.mintByTx(txId, pacUSDAmount, toAccount);
@@ -185,9 +188,12 @@ contract MMFVault is
         uint256 price = pricer.getLatestPrice();
         if (price == 0) revert InvalidPrice();
         if (price != lastPrice) revert InvalidPrice();
-        // Calculate MMF amount (1 MMF = price PacUSD)
-        uint256 mmfAmount = ((amount * mmfTokenDecimals) / price);
 
+        // Calculate MMF amount (1 MMF = price PacUSD)
+        uint256 mmfAmount = (amount *
+            10 ** mmfTokenDecimals *
+            10 ** PRICER_DECIMALS) / (price * 10 ** pacUSDDecimals);
+     
         pacUSDToken.transferFrom(_msgSender(), address(this), amount);
         pacUSD.burnByTx(txId, amount, address(this));
         mmfToken.safeTransfer(toAccount, mmfAmount);
@@ -208,8 +214,11 @@ contract MMFVault is
                 revert ZeroBalance();
             }
             uint256 priceDifference = currentPrice - lastPrice;
-            uint256 rewardAmount = (priceDifference * balance) /
-                mmfTokenDecimals;
+            uint256 rewardAmount = (priceDifference *
+                balance *
+                10 ** pacUSDDecimals) /
+                (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
+
             pacUSD.mintReward(rewardAmount, address(staking));
             staking.update();
             lastPrice = currentPrice;
