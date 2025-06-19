@@ -194,7 +194,7 @@ contract MMFVault is
             10 ** mmfTokenDecimals *
             10 ** PRICER_DECIMALS) / (price * 10 ** pacUSDDecimals);
      
-        pacUSDToken.transferFrom(_msgSender(), address(this), amount);
+        pacUSDToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.burnByTx(txId, amount, address(this));
         mmfToken.safeTransfer(toAccount, mmfAmount);
 
