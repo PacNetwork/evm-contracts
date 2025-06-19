@@ -294,7 +294,7 @@ contract PacUSD is
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (isBlacklisted(to)) revert BlacklistedRecipient();
-        if (balanceOf(address(this)) < amount) revert InsufficientBalance();
+        if (tokenContract.balanceOf(address(this)) < amount) revert InsufficientBalance();
         tokenContract.safeTransfer(to, amount);
         emit TokensRescued(to, amount);
     }
