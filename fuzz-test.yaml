@@ -1,0 +1,44 @@
+# fuzz-test.yaml - Configuration for Echidna fuzz testing
+
+# Basic test settings
+testMode: assertion  # Specifies the test mode to check for assertion failures
+testLimit: 500000    # Maximum number of test cases to generate
+timeout: 28800       # Maximum duration of the test run in seconds (8 hours)
+shrinkLimit: 10000   # Maximum number of attempts to shrink failing test cases
+
+# Coverage settings
+coverage: true       # Enables code coverage tracking
+corpusDir: "corpus"  # Directory to store the test corpus for coverage and replay
+
+# Contract settings
+deployer: "0x30000"  # Address used to deploy the contracts
+sender: ["0x10000", "0x20000", "0x30000"]  # List of sender addresses for transactions
+
+# Functions to test - Includes specific business scenarios and random combinations
+filterFunctions: [
+  # Business scenario functions (5 functions)
+  "scenario_UserLifecycle(uint256,uint256,bytes32)",  # Tests the complete user lifecycle
+  "scenario_LiquidityManagement(uint256,uint256,uint256,bytes32)",  # Tests liquidity management operations
+  "scenario_PriceVolatility(uint256,uint256,uint256,bytes32)",  # Tests responses to price changes
+  "scenario_Emergency(uint256,uint256,bytes32)",  # Tests emergency situation operations
+  "scenario_TransactionSystem(uint256,uint256,uint256,bytes32)",  # Tests transaction-based minting/burning
+
+  # Random combination functions (4 functions)
+  "fuzz_RandomOperationCombination(uint256,uint256,uint256,uint256,uint256,bytes32)",  # Tests random operation sequences
+  "fuzz_CoreOperationsCombination(uint256,uint256,uint256,uint256,bytes32)",  # Tests random core operation combinations
+  "fuzz_RewardMechanism(uint256,uint256,uint256,uint256,bytes32)",  # Tests random reward-related operations
+  "fuzz_MultiUserInteraction(uint256,uint256,uint256,uint256,bytes32)"  # Tests multi-user interactions
+]
+
+# Sequence settings
+seqLen: 200  # Maximum length of transaction sequences to test
+
+# Output settings
+quiet: false  # Enables verbose output for test results
+format: text  # Sets output format to plain text
+
+# Worker settings
+workers: 1  # Number of worker processes for parallel testing
+
+# Seed settings
+seed: 0  # Initial seed for random test case generation

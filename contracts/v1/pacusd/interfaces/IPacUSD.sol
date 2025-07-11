@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -10,20 +10,19 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IPacUSD {
     // Custom errors
     error ZeroAddress();
-    error BlacklistedRecipient();
-    error BlacklistedSender();
+    error BlocklistedAccount();
     error InsufficientBalance();
     error InvalidRescueSource();
     error NotMinter();
-    error TxIdInvalid();
+    error TxIdInvalid(bytes32 txId,uint256 status);
     error ZeroAmount();
 
     // Event definitions
     event Mint(address indexed to, uint256 amount);
     event Burn(address indexed from, uint256 amount);
-    event Blacklisted(address indexed account);
-    event Unblacklisted(address indexed account);
-    event TokensRescued(address indexed to, uint256 amount);
+    event AddToBlocklist(address indexed account);
+    event RemoveFromBlocklist(address indexed account);
+    event TokensRescued(IERC20 indexed tokenContract,address indexed to, uint256 amount);
     event MintTxSet(bytes32 indexed txId);
     event MintTxCancelled(bytes32 indexed txId);
     event BurnTxSet(bytes32 indexed txId);
@@ -43,26 +42,26 @@ interface IPacUSD {
     function unpause() external;
 
     /**
-     * @notice Adds an account to the blacklist, preventing token transfers
-     * @dev Only callable by accounts with BLACKLISTER_ROLE, rejects zero addresses
-     * @param account The address to blacklist
+     * @notice Adds an account to the blocklist, preventing token transfers
+     * @dev Only callable by accounts with BLOCKLISTER_ROLE, rejects zero addresses
+     * @param account The address to blocklist
      */
-    function blacklist(address account) external;
+    function addToBlocklist(address account) external;
 
     /**
-     * @notice Removes an account from the blacklist, restoring token transfer privileges
-     * @dev Only callable by accounts with BLACKLISTER_ROLE, rejects zero addresses
-     * @param account The address to unblacklist
+     * @notice Removes an account from the blocklist, restoring token transfer privileges
+     * @dev Only callable by accounts with BLOCKLISTER_ROLE, rejects zero addresses
+     * @param account The address to unblocklist
      */
-    function unblacklist(address account) external;
+    function removeFromBlocklist(address account) external;
 
     /**
-     * @notice Checks if an account is blacklisted
-     * @dev View function returning the blacklist status of an account
+     * @notice Checks if an account is blocklisted
+     * @dev View function returning the blocklist status of an account
      * @param account The address to check
-     * @return bool True if the account is blacklisted, false otherwise
+     * @return bool True if the account is blocklisted, false otherwise
      */
-    function isBlacklisted(address account) external view returns (bool);
+    function isBlocklisted(address account) external view returns (bool);
 
     /**
      * @notice Registers a mint transaction ID for future execution
@@ -148,4 +147,11 @@ interface IPacUSD {
      * @return bool True if the account is a minter, false otherwise
      */
     function isMinter(address account) external view returns (bool);
+
+
+     /**
+     * @notice Gets the implementation version of the contract
+     * @return versionString The semantic version string (e.g., "v1", "v2.1")
+     */
+    function version() external pure returns (string memory versionString);
 }

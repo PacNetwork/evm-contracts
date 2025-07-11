@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -10,10 +10,10 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {IPacUSD} from "./interface/IPacUSD.sol";
-import {IPricer} from "./interface/IPricer.sol";
-import {IStaking} from "./interface/IStaking.sol";
-import {IMMFVault} from "./interface/IMMFVault.sol";
+import {IMMFVault} from "./interfaces/IMMFVault.sol";
+import {IPricer} from "../../interfaces/IPricer.sol";
+import {IPacUSD} from "../pacusd/interfaces/IPacUSD.sol";
+import {IPacUSDStaking} from "../staking/interfaces/IPacUSDStaking.sol";
 
 /**
  * @title MMFVault
@@ -31,19 +31,23 @@ contract MMFVault is
 {
     using SafeERC20 for IERC20;
 
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    uint256 private constant PRICER_DECIMALS = 18;
+
     // Token and pricer contracts
     IERC20 public mmfToken;
     IERC20 public pacUSDToken;
 
     IPacUSD public pacUSD;
     IPricer public pricer;
-    IStaking public staking;
+    IPacUSDStaking public staking;
 
     // Last recorded price for reward calculation
     uint256 public lastPrice;
     uint256 mmfTokenDecimals;
     uint256 pacUSDDecimals;
-    uint256 public constant PRICER_DECIMALS = 18;
+    uint256 _totalMMFToken;
+    uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -56,7 +60,7 @@ contract MMFVault is
      * @param pacUSDTokenAddress Address of the PacUSD token contract
      * @param pricerAddress Address of the pricer contract
      * @param ownerAddress Address to assign owner
-     * @param adminAddress Address to assign admin and pauser roles
+     * @param upgrader The address to upgrade contract
      */
     function initialize(
         address mmfTokenAddress,
@@ -64,7 +68,7 @@ contract MMFVault is
         address pricerAddress,
         address stakingAddress,
         address ownerAddress,
-        address adminAddress
+        address upgrader
     ) public initializer {
         if (
             mmfTokenAddress == address(0) ||
@@ -72,9 +76,9 @@ contract MMFVault is
             pricerAddress == address(0) ||
             stakingAddress == address(0) ||
             ownerAddress == address(0) ||
-            adminAddress == address(0)
+            upgrader == address(0)
         ) revert ZeroAddress();
-        __Ownable_init(adminAddress);
+        __Ownable_init(upgrader);
         __UUPSUpgradeable_init();
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -86,8 +90,11 @@ contract MMFVault is
         pacUSD = IPacUSD(pacUSDTokenAddress);
         pacUSDDecimals = ERC20(pacUSDTokenAddress).decimals();
         pricer = IPricer(pricerAddress);
-        staking = IStaking(stakingAddress);
+        staking = IPacUSDStaking(stakingAddress);
         lastPrice = pricer.getLatestPrice();
+        if (lastPrice < 1 * 10 ** PRICER_DECIMALS) {
+            revert InvalidPrice();
+        }
         _grantRole(DEFAULT_ADMIN_ROLE, ownerAddress);
     }
 
@@ -95,7 +102,9 @@ contract MMFVault is
      * @notice Authorizes contract upgrades (UUPS pattern)
      * @dev Only callable by admin role
      */
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImpl) internal override onlyOwner {
+        if (newImpl == address(0)) revert ZeroAddress();
+    }
 
     /**
      * @notice Pauses the contract
@@ -117,16 +126,16 @@ contract MMFVault is
      * @notice Swaps MMF tokens for PacUSD
      * @param txId Transaction ID (block.chainid, hash of address(this), sender, amount, toAccount, timestamp)
      * @param amount Amount of MMF tokens to swap
-     * @param toAccount Recipient address for PacUSD
+     * @param to Recipient address for PacUSD
      * @param timestamp Timestamp used in txId hash
      */
     function mintPacUSD(
         bytes32 txId,
         uint256 amount,
-        address toAccount,
+        address to,
         uint256 timestamp
     ) external whenNotPaused nonReentrant {
-        if (toAccount == address(0)) revert ZeroAddress();
+        if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (
             txId !=
@@ -136,14 +145,14 @@ contract MMFVault is
                     address(this),
                     _msgSender(),
                     amount,
-                    toAccount,
+                    to,
                     timestamp
                 )
             )
         ) revert InvalidTxId();
-
+        _totalMMFToken += amount;
         uint256 price = pricer.getLatestPrice();
-        if (price == 0) revert InvalidPrice();
+        if (price < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
         if (price != lastPrice) revert InvalidPrice();
 
         // Calculate PacUSD amount (1 MMF = price PacUSD)
@@ -151,25 +160,32 @@ contract MMFVault is
             (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
 
         mmfToken.safeTransferFrom(_msgSender(), address(this), amount);
-        pacUSD.mintByTx(txId, pacUSDAmount, toAccount);
+        pacUSD.mintByTx(txId, pacUSDAmount, to);
 
-        emit MintPacUSD(txId, toAccount, timestamp, amount, pacUSDAmount);
+        emit MintPacUSD(
+            _msgSender(),
+            txId,
+            to,
+            timestamp,
+            amount,
+            pacUSDAmount
+        );
     }
 
     /**
      * @notice Swaps PacUSD for MMF tokens
-     * @param txId Transaction ID (chainid,hash of address(this),sender,hash of sender, amount, toAccount, timestamp)
+     * @param txId Transaction ID (chainid,hash of address(this),sender,hash of sender, amount, to, timestamp)
      * @param amount Amount of PacUSD to swap
-     * @param toAccount Recipient address for MMF tokens
+     * @param to Recipient address for MMF tokens
      * @param timestamp Timestamp used in txId hash
      */
     function redeemMMF(
         bytes32 txId,
         uint256 amount,
-        address toAccount,
+        address to,
         uint256 timestamp
     ) external whenNotPaused nonReentrant {
-        if (toAccount == address(0)) revert ZeroAddress();
+        if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (
             txId !=
@@ -179,26 +195,26 @@ contract MMFVault is
                     address(this),
                     _msgSender(),
                     amount,
-                    toAccount,
+                    to,
                     timestamp
                 )
             )
         ) revert InvalidTxId();
 
         uint256 price = pricer.getLatestPrice();
-        if (price == 0) revert InvalidPrice();
+        if (price < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
         if (price != lastPrice) revert InvalidPrice();
 
         // Calculate MMF amount (1 MMF = price PacUSD)
         uint256 mmfAmount = (amount *
             10 ** mmfTokenDecimals *
             10 ** PRICER_DECIMALS) / (price * 10 ** pacUSDDecimals);
-     
+        _totalMMFToken -= mmfAmount;
         pacUSDToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.burnByTx(txId, amount, address(this));
-        mmfToken.safeTransfer(toAccount, mmfAmount);
+        mmfToken.safeTransfer(to, mmfAmount);
 
-        emit RedeemMMF(txId, toAccount, timestamp, amount, mmfAmount);
+        emit RedeemMMF(_msgSender(), txId, to, timestamp, amount, mmfAmount);
     }
 
     /**
@@ -207,22 +223,46 @@ contract MMFVault is
      */
     function mintReward() public whenNotPaused nonReentrant {
         uint256 currentPrice = pricer.getLatestPrice();
-        if (currentPrice == 0) revert InvalidPrice();
+        if (currentPrice < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
         if (currentPrice > lastPrice) {
             uint256 balance = mmfToken.balanceOf(address(this));
-            if (balance == 0) {
-                revert ZeroBalance();
+            if (balance > uint256(0)) {
+                uint256 priceDifference = currentPrice - lastPrice;
+                uint256 rewardAmount = (priceDifference *
+                    balance *
+                    10 ** pacUSDDecimals) /
+                    (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
+                uint256 tempLastPrice = lastPrice;
+                lastPrice = currentPrice;
+                staking.update();
+                pacUSD.mintReward(rewardAmount, address(staking));
+                emit RewardMinted(
+                    address(staking),
+                    rewardAmount,
+                    tempLastPrice,
+                    currentPrice,
+                    balance
+                );
+            } else {
+                lastPrice = currentPrice; //need update price
+                staking.update(); //need invoke update
             }
-            uint256 priceDifference = currentPrice - lastPrice;
-            uint256 rewardAmount = (priceDifference *
-                balance *
-                10 ** pacUSDDecimals) /
-                (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
-
-            pacUSD.mintReward(rewardAmount, address(staking));
-            staking.update();
-            lastPrice = currentPrice;
-            emit RewardMinted(address(staking), rewardAmount);
         }
+    }
+
+    /**
+     * @notice Retrieve the total amount of MMF tokens stored in the Vault through swaps by all users
+     * @dev This function queries and returns the cumulative balance of MMF tokens that all users have deposited into the designated Vault contract via token swaps
+     * @return A uint256 value representing the total quantity of MMF tokens currently held in the Vault
+     */
+    function totalMMFToken() external view returns (uint256) {
+        return _totalMMFToken;
+    }
+
+    /**
+     * @notice implementation version.
+     */
+    function version() external pure virtual returns (string memory) {
+        return "v1";
     }
 }
