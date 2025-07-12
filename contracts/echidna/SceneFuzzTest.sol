@@ -483,7 +483,7 @@ contract SceneFuzzTest is BaseFuzz {
         } else if (operationIndex == 24) {
             executeUnpauseStaking();
         } else if (operationIndex == 25) {
-            executeUpdateStaking();
+            executeDistributeReward(amount);
         } else if (operationIndex == 26) {
             executeSetMinStakingPeriod(amount);
         }
@@ -899,11 +899,11 @@ contract SceneFuzzTest is BaseFuzz {
 
     /**
      * @notice Updates staking contract parameters
-     * @dev Calls the staking contract's update function
+     * @dev Calls the staking contract's distributeReward function
      */
-    function executeUpdateStaking() internal {
+    function executeDistributeReward(uint256 amount) internal {
         vm.startPrank(address(vault));
-        try staking.update() {
+        try staking.distributeReward(amount) {
             successfulOperations++;
         } catch {}
         vm.stopPrank();

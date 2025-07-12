@@ -85,9 +85,7 @@ contract StakingDeployFactory is IDeployFactory {
                     adminAddress,
                     ownerAddress,
                     reserveAddress,
-                    vaultAddresses,
-                    pricerAddresses,
-                    mmfTokenAddresses
+                    vaultAddresses
                 )
             )
         );

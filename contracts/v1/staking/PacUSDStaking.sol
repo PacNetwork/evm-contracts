@@ -6,42 +6,10 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPacUSDStaking} from "./interfaces/IPacUSDStaking.sol";
 import {IRewardScheme} from "./interfaces/IRewardScheme.sol";
-import {IPricer} from "../../interfaces/IPricer.sol";
 import {BaseStaking} from "./BaseStaking.sol";
-import {IMMFVault} from "../vault/interfaces/IMMFVault.sol";
 
 contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     using SafeERC20 for IERC20;
-
-    // errors
-    error ZeroAmount();
-    error InvalidArrayLength();
-    error InvalidPrice(uint256 attested, uint256 ref); // attested price must not be larger than the reference price
-    error InvalidRewardRate(uint256 attested, uint256 ref); // attested reward rate must not be larger than the reference reward rate
-    error InvalidTokenSupply(uint256 totalSupply, uint256 totalStaked);
-    error InsufficientStakingBalance(
-        address user,
-        uint256 amount,
-        uint256 balance
-    );
-    error InsufficientTokenBalance(
-        address user,
-        uint256 amount,
-        uint256 balance
-    );
-    error InsufficientRewardBalance(
-        address user,
-        uint256 amount,
-        uint256 balance
-    );
-    error InsufficientStakingPeriod(
-        address user,
-        uint256 unstakeAt,
-        uint256 unlockedAt
-    );
-    error RewardSchemeAlreadyAdded(address scheme);
-    error RewardSchemeNotFound(address scheme);
-    error NotUpdater();
 
     bytes32 public constant RESERVE_SET_ROLE = keccak256("RESERVE_SET_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
@@ -52,8 +20,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     uint256 public PRECISION;
     uint256 public RATE_PRECISION;
     address public RESERVE;
-    mapping(address => address) public PRICERS;
-    mapping(address => address) public MMFTOKENS;
+    mapping(address => bool) public UPDATERS;
 
     /// @notice minimum staking period in seconds
     /// @dev can be set by admin, default is 1 day
@@ -66,9 +33,8 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
 
     uint256 internal totalStaked_;
     uint256 internal accumulatedRewardRate;
-    mapping(address => uint256) internal lastPrices;
     mapping(address => uint256) internal stakingBalances;
-    mapping(address => bool) internal _updaters;
+
     /// @dev RESET whenever a user stakes/unstakes tokens
     mapping(address => uint256) internal stakingTimestamps;
 
@@ -76,11 +42,13 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     mapping(address => uint256) internal allowedUnstakedAmounts;
     mapping(address => uint256) internal entryRewardRates;
 
+    uint256[50] private __gap; // Reserve space for future variables
+
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event Restaked(address indexed user, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
-    event Updated(address indexed updater, uint256 price, uint256 rewardRate);
+    event RewardDistributed(address indexed updater, uint256 newReward, uint256 rewardRate);
     event ReserveSet(address indexed reserve);
     event RewardSchemeAdded(address indexed scheme);
     event RewardSchemeRemoved(address indexed scheme);
@@ -91,32 +59,22 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
      * @param token staked token address
      * @param upgrader address that can upgrade the contract
      * @param admin admin address
-     * @param vaults vault addresses
-     * @param pricers pricer addresses of the underlying assets
-     * @param mmfTokens  addresses of the underlying assets
+     * @param updaters addresses allowed to call function `update`
      */
     function initialize(
         address token,
         address upgrader,
         address admin,
         address reserve,
-        address[] memory vaults,
-        address[] memory pricers,
-        address[] memory mmfTokens
+        address[] memory updaters
     ) public virtual initializer {
-        if (
-            vaults.length == 0 ||
-            vaults.length != pricers.length ||
-            vaults.length != mmfTokens.length
-        ) revert InvalidArrayLength();
+        if (updaters.length == 0) revert InvalidArrayLength();
 
         if (token == address(0) || reserve == address(0)) revert ZeroAddress();
 
-        uint256 len = vaults.length;
+        uint256 len = updaters.length;
         for (uint256 i; i < len; ++i) {
-            if (vaults[i] == address(0)) revert ZeroAddress();
-            if (pricers[i] == address(0)) revert ZeroAddress();
-            if (mmfTokens[i] == address(0)) revert ZeroAddress();
+            if (updaters[i] == address(0)) revert ZeroAddress();
         }
 
         __BaseStaking_init(upgrader, admin);
@@ -125,22 +83,12 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         PRECISION = 10 ** ERC20(token).decimals();
         RATE_PRECISION = 10 ** (ERC20(token).decimals() * 2);
         RESERVE = reserve;
-        for (uint256 i; i < len; ++i) {
-            PRICERS[vaults[i]] = pricers[i];
-            MMFTOKENS[vaults[i]] = mmfTokens[i];
-        }
 
         minStakingPeriod = 1 days;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         for (uint256 i; i < len; ++i) {
-            _updaters[vaults[i]] = true;
-            // initialize price
-            IPricer price = IPricer(pricers[i]);
-            uint256 latestPrice = price.getLatestPrice();
-            if (latestPrice < PRECISION)
-                revert InvalidPrice(latestPrice, PRECISION);
-            lastPrices[vaults[i]] = latestPrice;
+            UPDATERS[updaters[i]] = true;
         }
     }
 
@@ -148,7 +96,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
      * @dev Modifier that only updater can call
      */
     modifier onlyUpdater() {
-        if (!_updaters[_msgSender()]) revert NotUpdater();
+        if (!UPDATERS[_msgSender()]) revert NotUpdater();
         _;
     }
 
@@ -190,7 +138,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         uint256 length = rewardSchemes.length;
         if (index != length) {
             // assign the last element to the to-be-removed element's position
-            address lastScheme = rewardSchemes[length-1];
+            address lastScheme = rewardSchemes[length - 1];
             rewardSchemes[index - 1] = lastScheme;
             schemeIndexMap[lastScheme] = index;
         }
@@ -368,44 +316,24 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     }
 
     /**
-     * @notice update the accumulated rewward rate based on the latest price.
-     * @dev the price assumed to be monotonically increasing.
+     * @notice distribute new reward to stakers.
+     * @param newReward the amount of new reward to distribute.
      */
-    function update() external onlyUpdater nonReentrant whenNotPaused {
-        address updater = _msgSender();
+    function distributeReward(
+        uint256 newReward
+    ) external onlyUpdater nonReentrant whenNotPaused {
+        if (newReward == 0) revert ZeroAmount();
 
-        IPricer pricer = IPricer(PRICERS[updater]);
-        uint256 lastPrice = lastPrices[updater];
-        uint256 currentPrice = pricer.getLatestPrice();
+        uint256 totalSupply = STAKED_TOKEN.totalSupply();
+        if (totalSupply < totalStaked_)
+            revert InvalidTokenSupply(totalSupply, totalStaked_);
 
-        if (currentPrice < lastPrice)
-            revert InvalidPrice(currentPrice, lastPrice);
+        uint256 incRate = _calculateRateInc(newReward, totalSupply);
+        accumulatedRewardRate += incRate;
 
-        // nothing to update if the price is the same
-        if (currentPrice == lastPrice) return;
-
-        //Get updater mmftoken balance
-        uint256 updaterBalance = IMMFVault(updater).totalMMFToken();
-
-        if (updaterBalance > 0) {
-            uint256 totalSupply = STAKED_TOKEN.totalSupply();
-            if (totalSupply < totalStaked_)
-                revert InvalidTokenSupply(totalSupply, totalStaked_);
-            //calculate the current increase of this vault
-            uint256 r = (updaterBalance *
-                (currentPrice - lastPrice) *
-                PRECISION) / totalSupply; //  PRECISION= 10**(ERC20(token).decimals()*2 -  ERC20(token).decimals()) 
-
-            accumulatedRewardRate += r;
-
-            // update reward balance for RESERVE
-            uint256 reward = ((totalSupply - totalStaked_) * r) /
-                RATE_PRECISION;
-            rewardBalances[RESERVE] += reward;
-        }
-
-        // update last price
-        lastPrices[updater] = currentPrice;
+        // update reward balance for RESERVE
+        uint256 incReserve = _calculateReserveInc(incRate, totalSupply);
+        rewardBalances[RESERVE] += incReserve;
 
         // update the external reward schemes
         uint256 length = rewardSchemes.length;
@@ -414,7 +342,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
             if (scheme.isActive()) scheme.update();
         }
 
-        emit Updated(updater, currentPrice, accumulatedRewardRate);
+        emit RewardDistributed(_msgSender(), newReward, accumulatedRewardRate);
 
         return;
     }
@@ -475,6 +403,21 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         return reward;
     }
 
+    function _calculateRateInc(
+        uint256 newReward,
+        uint256 totalSupply
+    ) internal view virtual returns (uint256) {
+        return
+            (newReward * RATE_PRECISION) / totalSupply;
+    }
+
+    function _calculateReserveInc(
+        uint256 rateInc,
+        uint256 totalSupply
+    ) internal view virtual returns (uint256) {
+        return ((totalSupply - totalStaked_) * rateInc) / RATE_PRECISION;
+    }
+
     /**
      * @notice implementation version.
      */
@@ -510,15 +453,4 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     function getAllSchemes() external view returns (address[] memory) {
         return rewardSchemes;
     }
-
-     /**
-     * @notice Checks if an account has updater privileges.
-     * @dev View function to query the updater status of an account.
-     * @param account The address to check.
-     * @return bool True if the account is a updater, false otherwise.
-     */
-    function isUpdater(address account) public view returns (bool) {
-        return _updaters[account];
-    }
-
 }

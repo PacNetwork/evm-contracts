@@ -9,11 +9,9 @@ contract MockPacUSDStakingV2 is PacUSDStaking {
         address upgrader,
         address admin,
         address reserve,
-        address[] memory vaults,
-        address[] memory pricers,
-        address[] memory mmfTokens
+        address[] memory vaults
     ) public override initializer {
-        super.initialize(token, upgrader, admin, reserve, vaults, pricers,mmfTokens);
+        super.initialize(token, upgrader, admin, reserve, vaults);
     }
 
     function version() external pure override returns (string memory) {
