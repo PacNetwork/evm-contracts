@@ -4,29 +4,38 @@ pragma solidity 0.8.28;
 interface IPacUSDStaking {
     error ZeroAmount();
     error InvalidArrayLength();
-    error InvalidPrice(uint256 attested, uint256 ref); // attested price must not be larger than the reference price
-    error InvalidRewardRate(uint256 attested, uint256 ref); // attested reward rate must not be larger than the reference reward rate
-    error InvalidTokenSupply(uint256 totalSupply, uint256 totalStaked);
+
+    /// @notice revert when the attested is less than the reference
+    error InvalidRewardRate(uint256 attested, uint256 ref);
+    
+    /// @notice revert when the amount is larger than the staking balance
     error InsufficientStakingBalance(
         address user,
         uint256 amount,
         uint256 balance
     );
+    
+    /// @notice revert when the amount is larger than the reward balance
     error InsufficientTokenBalance(
         address user,
         uint256 amount,
         uint256 balance
     );
+
+    /// @notice revert when the amount is larger than the reward balance
     error InsufficientRewardBalance(
         address user,
         uint256 amount,
         uint256 balance
     );
+
+    /// @notice revert when the unstake time is ealier than the unlocked time
     error InsufficientStakingPeriod(
         address user,
         uint256 unstakeAt,
         uint256 unlockedAt
     );
+
     error RewardSchemeAlreadyAdded(address scheme);
     error RewardSchemeNotFound(address scheme);
     error NotUpdater();
