@@ -51,7 +51,7 @@ abstract contract BaseFuzz {
     address ADMIN = address(0x20000);
     address UPGRADER = address(0x3000);
     address RESERVE = address(0x9000);
-    address BLACKLISTED_USER = address(0x5000);
+    address BLOCKLISTED_USER = address(0x5000);
 
     // Test user management
     mapping(address => bool) public knownUsers;
@@ -193,7 +193,7 @@ abstract contract BaseFuzz {
         pacUSD.grantRole(pacUSD.BLOCKLISTER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.APPROVER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.RESCUER_ROLE(), OWNER);
-        pacUSD.addToBlocklist(BLACKLISTED_USER);
+        pacUSD.addToBlocklist(BLOCKLISTED_USER);
         vm.stopPrank();
 
         vm.startPrank(ADMIN);

@@ -37,7 +37,7 @@ contract PacUSD is
     // Minter addresses
     mapping(address => bool) private _minters;
 
-    // Blacklist mapping to freeze individual accounts
+    // Blocklist mapping to freeze individual accounts
     mapping(address => bool) private _blocklist;
     //Transaction state tracking
     uint256 private constant TX_STATE_DEFAULT = 0;
@@ -134,8 +134,8 @@ contract PacUSD is
 
     /**
      * @notice Adds an account to the blocklist, preventing it from sending or receiving tokens.
-     * @dev Only callable by an account with BLACKLISTER_ROLE. Reverts if the account is the zero address.
-     *      Emits a Blacklisted event.
+     * @dev Only callable by an account with BLOCKLISTER_ROLE. Reverts if the account is the zero address.
+     *      Emits a Blocklisted event.
      * @param account The address to blocklist.
      */
     //Blocklister
@@ -149,7 +149,7 @@ contract PacUSD is
 
     /**
      * @notice Removes an account from the blocklist, allowing it to send and receive tokens.
-     * @dev Only callable by an account with BLACKLISTER_ROLE. Reverts if the account is the zero address.
+     * @dev Only callable by an account with BLOCKLISTER_ROLE. Reverts if the account is the zero address.
      *      Emits an Unblocklisted event.
      * @param account The address to remove from the blocklist.
      */

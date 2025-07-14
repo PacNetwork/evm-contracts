@@ -239,7 +239,7 @@ describe("PacUSD", function () {
     });
   });
 
-  describe("Blacklisting", function () {
+  describe("Blocklisting", function () {
     it("should allow blocklister to blocklist an account", async function () {
       await pacUSD
         .connect(owner)
@@ -265,7 +265,7 @@ describe("PacUSD", function () {
       );
     });
 
-    it("should allow blocklister to removeFromBlacklist an account", async function () {
+    it("should allow blocklister to removeFromBlocklist an account", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await pacUSD
         .connect(owner)
@@ -748,7 +748,7 @@ describe("PacUSD", function () {
       await mockExternalToken.transfer(pacUSD.target, AMOUNT);
       await pacUSD.grantRole(await pacUSD.RESCUER_ROLE(), rescuer.address);
 
-      // Blacklist the intended recipient
+      // Blocklist the intended recipient
       await pacUSD.connect(owner).addToBlocklist(user2.address);
 
       // Attempt rescue to blocklisted address should fail
@@ -1046,7 +1046,7 @@ describe("PacUSD", function () {
     });
 
     it("should revert when owner is blocklisted", async function () {
-      // Blacklist the permit owner (user1)
+      // Blocklist the permit owner (user1)
       await pacUSD.connect(owner).addToBlocklist(user1.address);
 
       const spender = user2.address;
@@ -1086,7 +1086,7 @@ describe("PacUSD", function () {
     });
 
     it("should revert when spender is blocklisted", async function () {
-      // Blacklist the permit spender (user2)
+      // Blocklist the permit spender (user2)
       await pacUSD.connect(owner).addToBlocklist(user2.address);
 
       const spender = user2.address;

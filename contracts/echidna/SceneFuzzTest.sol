@@ -337,9 +337,9 @@ contract SceneFuzzTest is BaseFuzz {
     // Scenario 4: Admin Operations
     // ======================================
     /**
-     * @notice Tests admin operations: pause, unpause, blacklist, or staking period update
+     * @notice Tests admin operations: pause, unpause, blocklist, or staking period update
      * @param userIndex Index of the user in userList
-     * @param operation Operation type (0: pause/unpause, 1: blacklist, 2: staking pause, 3: set staking period)
+     * @param operation Operation type (0: pause/unpause, 1: blocklist, 2: staking pause, 3: set staking period)
      */
     function scenario_AdminOperations(
         uint256 userIndex,
@@ -813,8 +813,8 @@ contract SceneFuzzTest is BaseFuzz {
     }
 
     /**
-     * @notice Adds a user to the blacklist
-     * @param user User address to blacklist
+     * @notice Adds a user to the blocklist
+     * @param user User address to blocklist
      */
     function executeAddToBlocklist(address user) internal {
         vm.startPrank(OWNER);
@@ -825,8 +825,8 @@ contract SceneFuzzTest is BaseFuzz {
     }
 
     /**
-     * @notice Removes a user from the blacklist
-     * @param user User address to remove from blacklist
+     * @notice Removes a user from the blocklist
+     * @param user User address to remove from blocklist
      */
     function executeRemoveFromBlocklist(address user) internal {
         vm.startPrank(OWNER);
@@ -1074,13 +1074,13 @@ contract SceneFuzzTest is BaseFuzz {
     }
 
     /**
-     * @notice Checks restrictions for blacklisted users
-     * @return bool True if blacklisted user's balance is within limits
+     * @notice Checks restrictions for blocklisted users
+     * @return bool True if blocklisted user's balance is within limits
      */
     function echidna_blocklist_restrictions() public view returns (bool) {
-        if (pacUSD.isBlocklisted(BLACKLISTED_USER)) {
-            uint256 balance = pacUSD.balanceOf(BLACKLISTED_USER);
-            // Blacklisted user's balance should not grow abnormally
+        if (pacUSD.isBlocklisted(BLOCKLISTED_USER)) {
+            uint256 balance = pacUSD.balanceOf(BLOCKLISTED_USER);
+            // Blocklisted user's balance should not grow abnormally
             return balance <= 1000000e18;
         }
         return true;
