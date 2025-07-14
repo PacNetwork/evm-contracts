@@ -96,29 +96,23 @@ export async function deploy(useCache: boolean = true) {
 
   //global
   const upgraderAddress = process.env.UPGRADER_ADDRESS || "";
-  const ownerAddress = process.env.OWNER_ADDRESS || "";
+  const adminAddress = process.env.ADMIN_ADDRESS || "";
   //pacusd
   const pacUSDPauserAddress = process.env.PACUSD_PAUSER_ADDRESS || "";
   const pacUSDApproverAddress = process.env.PACUSD_APPROVER_ADDRESS || "";
   const pacUSDRescuerAddress = process.env.PACUSD_RESCUER_ADDRESS || "";
-  const pacUSDBlocklisterAddress = process.env.PACUSD_BLACKLISTER_ADDRESS || "";
+  const pacUSDBlocklisterAddress = process.env.PACUSD_BLOCKLISTER_ADDRESS || "";
 
   //vault
   const vaultPauserAddress = process.env.VAULT_PAUSER_ADDRESS || "";
 
   //stking
   const stakingReserveAddress = process.env.STAKING_RESERVE_ADDRESS || "";
-  const stakingPauserAddress = process.env.STAKING_PAUSER_ADDRESS || "";
+  const stakingPauserAddress = process.env.STAKING_PAUSER_ROLE || "";
   const stakingRewardSchemeAddress =
     process.env.STAKING_REWARD_SCHEME_ROLE || "";
   const stakingReserveSetAddress = process.env.STAKING_RESERVE_SET_ROLE || "";
 
-  //
-  // const pauserAddress = process.env.PAUSER_ADDRESS || "";
-  // const rescuerAddress = process.env.RESCUER_ADDRESS || "";
-  // const reserveAddress = process.env.RESERVE_ADDRESS || "";
-  // const approverAddress = process.env.APPROVER_ADDRESS || "";
-  // const blocklisterAddress = process.env.BLOCKLISTER_ADDRESS || "";
 
   deploymentState.addresses.priceAddress = pricerAddress;
   deploymentState.addresses.mmfTokenAddress = mmfTokenAddress;
@@ -128,7 +122,7 @@ export async function deploy(useCache: boolean = true) {
   console.log(`PRICER_ADDRESS: ${pricerAddress}`);
   console.log(`MMFTOKEN_ADDRESS: ${mmfTokenAddress}`);
   console.log(`UPGRADER_ADDRESS: ${upgraderAddress}`);
-  console.log(`OWNER_ADDRESS: ${ownerAddress}`);
+  console.log(`OWNER_ADDRESS: ${adminAddress}`);
   console.log(`PacUSD Permission:`);
   console.log(`-- PAUSER_ADDRESS: ${pacUSDPauserAddress}`);
   console.log(`-- RESCUER_ADDRESS: ${pacUSDRescuerAddress}`);
@@ -175,8 +169,19 @@ export async function deploy(useCache: boolean = true) {
     PRICER_ADDRESS: pricerAddress,
     MMFTOKEN_ADDRESS: mmfTokenAddress,
     UPGRADER_ADDRESS: upgraderAddress,
-    OWNER_ADDRESS: ownerAddress,
-    STAKING_RESERVE_ADDRESS: stakingReserveAddress,
+    ADMIN_ADDRESS: adminAddress,
+    //PACUSD
+    PACUSD_PAUSER_ADDRESS:pacUSDPauserAddress,
+    RESCUER_ADDRESS:pacUSDRescuerAddress,
+    APPROVER_ADDRESS:pacUSDApproverAddress,
+    BLOCKLISTER_ADDRESS:pacUSDBlocklisterAddress,
+    //mmfvault
+    MMFVAULT_PAUSER_ADDRESS:vaultPauserAddress,
+    //staking 
+    RESERVE_ADDRESS:stakingReserveAddress,
+    STAKING_PAUSER_ROLE:stakingPauserAddress,
+    RESERVE_SET_ROLE:stakingReserveSetAddress,
+    REWARD_SCHEME_ROLE:stakingRewardSchemeAddress,
   };
 
   const missingVariables = Object.entries(requiredVariables)
@@ -583,14 +588,14 @@ export async function deploy(useCache: boolean = true) {
       pacUSDPauserAddress,
       "PAUSER_ROLE"
     );
-
+    
     await checkRole(
       pacUSD,
       await pacUSD.BLOCKLISTER_ROLE(),
       pacUSDBlocklisterAddress,
       "BLOCKLISTER_ROLE"
     );
-
+    
     await checkRole(
       pacUSD,
       await pacUSD.RESCUER_ROLE(),
@@ -608,7 +613,7 @@ export async function deploy(useCache: boolean = true) {
     await checkRole(
       pacUSD,
       await pacUSD.DEFAULT_ADMIN_ROLE(),
-      ownerAddress,
+      adminAddress,
       "DEFAULT_ADMIN_ROLE"
     );
 
@@ -617,7 +622,7 @@ export async function deploy(useCache: boolean = true) {
       deployer.address
     );
 
-    if (deployerHasAdminRole && deployer.address !== ownerAddress) {
+    if (deployerHasAdminRole && deployer.address !== adminAddress) {
       await (
         await pacUSD.revokeRole(
           await pacUSD.DEFAULT_ADMIN_ROLE(),
@@ -651,7 +656,7 @@ export async function deploy(useCache: boolean = true) {
       await checkRole(
         vault,
         await vault.DEFAULT_ADMIN_ROLE(),
-        ownerAddress,
+        adminAddress,
         "DEFAULT_ADMIN_ROLE"
       );
 
@@ -660,7 +665,7 @@ export async function deploy(useCache: boolean = true) {
         deployer.address
       );
 
-      if (deployerHasAdminRole && deployer.address !== ownerAddress) {
+      if (deployerHasAdminRole && deployer.address !== adminAddress) {
         await (
           await vault.revokeRole(
             await vault.DEFAULT_ADMIN_ROLE(),
@@ -713,7 +718,7 @@ export async function deploy(useCache: boolean = true) {
     await checkRole(
       staking,
       await staking.DEFAULT_ADMIN_ROLE(),
-      ownerAddress,
+      adminAddress,
       "DEFAULT_ADMIN_ROLE"
     );
 
@@ -722,7 +727,7 @@ export async function deploy(useCache: boolean = true) {
       deployer.address
     );
 
-    if (deployerHasAdminRole && deployer.address !== ownerAddress) {
+    if (deployerHasAdminRole && deployer.address !== adminAddress) {
       await (
         await staking.revokeRole(
           await staking.DEFAULT_ADMIN_ROLE(),

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
@@ -28,14 +28,14 @@ contract PacUSDDeployFactory is IDeployFactory {
     /**
      * @notice Deploys PacUSD implementation and proxy with CREATE2 deterministic address
      * @dev Uses salt to ensure address predictability and validates against precomputed hashes
-     * @param pacUSDOwnerAddress Address to assign ownership of PacUSD
-     * @param adminAddress Address for upgrade administration
+     * @param admin Address to assign admin of PacUSD
+     * @param upgrader Address for upgrade administration
      * @param pacUSDSalt Salt for CREATE2 deterministic address calculation
      * @return pacUSDProxy Address of the deployed PacUSD proxy contract
      */
     function deployContracts(
-        address pacUSDOwnerAddress,
-        address adminAddress,
+        address admin,
+        address upgrader,
         bytes32 pacUSDSalt
     ) external returns (address pacUSDProxy) {
         if (msg.sender != owner) revert NotOwner();
@@ -43,8 +43,8 @@ contract PacUSDDeployFactory is IDeployFactory {
         // Validate input parameters against zero address
         // --------------------
         if (
-            pacUSDOwnerAddress == address(0) ||
-            adminAddress == address(0)
+            admin == address(0) ||
+            upgrader == address(0)
         ) revert ZeroAddress();
 
         // --------------------
@@ -91,7 +91,7 @@ contract PacUSDDeployFactory is IDeployFactory {
         (bool success, ) = pacUSDProxy.call(
             abi.encodeCall(
                 PacUSD.initialize,
-                (pacUSDOwnerAddress, adminAddress, vaultAddresses)
+                (admin, upgrader, vaultAddresses)
             )
         );
         if (!success) revert InitializationFailed();

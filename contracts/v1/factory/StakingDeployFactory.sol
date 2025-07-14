@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
@@ -20,8 +20,8 @@ contract StakingDeployFactory is IDeployFactory {
      * @notice Deploys PacUSDStaking contracts with UUPS proxies using CREATE2, incorporating msg.sender in salt
      * @param pricerAddresses Address of the pricer contract
      * @param mmfTokenAddresses Address of the mmftoken contract
-     * @param ownerAddress Address to assign ownership and admin roles for PacUSDStaking
-     * @param adminAddress Address to assign admin roles for upgrades
+     * @param admin Address to assign admin roles for PacUSDStaking
+     * @param upgrader Address for upgrade administration
      * @param reserveAddress Address to assign Reserve roles for reserve
      * @param salt Base salt for CREATE2 deployment of PacUSD proxy
      * @return pacUsdStakingProxy Address of the deployed PacUSDStaking proxy
@@ -29,8 +29,8 @@ contract StakingDeployFactory is IDeployFactory {
     function deployContracts(
         address[] memory pricerAddresses,
         address[] memory mmfTokenAddresses,
-        address ownerAddress,
-        address adminAddress,
+        address admin,
+        address upgrader,
         address reserveAddress,
         bytes32 salt
     ) external returns (address pacUsdStakingProxy) {
@@ -39,9 +39,9 @@ contract StakingDeployFactory is IDeployFactory {
         if (
             mmfTokenAddresses.length != pricerAddresses.length ||
             mmfTokenAddresses.length == 0 ||
-            ownerAddress == address(0) ||
+            admin == address(0) ||
             reserveAddress == address(0) ||
-            adminAddress == address(0)
+            upgrader == address(0)
         ) revert ZeroAddress();
         address pacUSDAddress = addressFactory.pacUSDAddress();
 
@@ -82,8 +82,8 @@ contract StakingDeployFactory is IDeployFactory {
                 PacUSDStaking.initialize,
                 (
                     pacUSDAddress,
-                    adminAddress,
-                    ownerAddress,
+                    upgrader,
+                    admin,
                     reserveAddress,
                     vaultAddresses
                 )

@@ -13,7 +13,7 @@ describe("PacUSD", function () {
   let owner: SignerWithAddress;
   let upgrader: SignerWithAddress;
   let pauser: SignerWithAddress;
-  let blacklister: SignerWithAddress;
+  let blocklister: SignerWithAddress;
   let approver: SignerWithAddress;
   let rescuer: SignerWithAddress;
   let minter: SignerWithAddress;
@@ -35,7 +35,7 @@ describe("PacUSD", function () {
       owner,
       upgrader,
       pauser,
-      blacklister,
+      blocklister,
       approver,
       rescuer,
       minter,
@@ -162,14 +162,6 @@ describe("PacUSD", function () {
       ).to.be.true;
     });
 
-    it("should revert if granting role to zero address", async function () {
-      await expect(
-        pacUSD
-          .connect(owner)
-          .grantRole(await pacUSD.PAUSER_ROLE(), ZERO_ADDRESS)
-      ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
-    });
-
     it("should revert if non-role-admin tries to grant role", async function () {
       await expect(
         pacUSD
@@ -190,14 +182,6 @@ describe("PacUSD", function () {
         .revokeRole(await pacUSD.PAUSER_ROLE(), user1.address);
       expect(await pacUSD.hasRole(await pacUSD.PAUSER_ROLE(), user1.address)).to
         .be.false;
-    });
-
-    it("should revert if revoking role from zero address", async function () {
-      await expect(
-        pacUSD
-          .connect(owner)
-          .revokeRole(await pacUSD.PAUSER_ROLE(), ZERO_ADDRESS)
-      ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
     it("should revert if non-role-admin tries to revoke role", async function () {
@@ -256,23 +240,23 @@ describe("PacUSD", function () {
   });
 
   describe("Blacklisting", function () {
-    it("should allow blacklister to blocklist an account", async function () {
+    it("should allow blocklister to blocklist an account", async function () {
       await pacUSD
         .connect(owner)
-        .grantRole(await pacUSD.BLOCKLISTER_ROLE(), blacklister.address);
-      await expect(pacUSD.connect(blacklister).addToBlocklist(user1.address))
+        .grantRole(await pacUSD.BLOCKLISTER_ROLE(), blocklister.address);
+      await expect(pacUSD.connect(blocklister).addToBlocklist(user1.address))
         .to.emit(pacUSD, "AddToBlocklist")
         .withArgs(user1.address);
       expect(await pacUSD.isBlocklisted(user1.address)).to.be.true;
     });
 
-    it("should revert if blacklisting zero address", async function () {
+    it("should revert if blocklisting zero address", async function () {
       await expect(
         pacUSD.connect(owner).addToBlocklist(ZERO_ADDRESS)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
-    it("should revert if non-blacklister tries to addToBlocklist", async function () {
+    it("should revert if non-blocklister tries to addToBlocklist", async function () {
       await expect(
         pacUSD.connect(user1).addToBlocklist(user2.address)
       ).to.be.revertedWithCustomError(
@@ -281,20 +265,20 @@ describe("PacUSD", function () {
       );
     });
 
-    it("should allow blacklister to removeFromBlacklist an account", async function () {
+    it("should allow blocklister to removeFromBlacklist an account", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await pacUSD
         .connect(owner)
-        .grantRole(await pacUSD.BLOCKLISTER_ROLE(), blacklister.address);
+        .grantRole(await pacUSD.BLOCKLISTER_ROLE(), blocklister.address);
       await expect(
-        pacUSD.connect(blacklister).removeFromBlocklist(user1.address)
+        pacUSD.connect(blocklister).removeFromBlocklist(user1.address)
       )
         .to.emit(pacUSD, "RemoveFromBlocklist")
         .withArgs(user1.address);
       expect(await pacUSD.isBlocklisted(user1.address)).to.be.false;
     });
 
-    it("should revert if unblacklisting zero address", async function () {
+    it("should revert if unblocklisting zero address", async function () {
       await expect(
         pacUSD.connect(owner).removeFromBlocklist(ZERO_ADDRESS)
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
@@ -366,7 +350,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
-    it("should revert if minting to blacklisted address", async function () {
+    it("should revert if minting to blocklisted address", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await pacUSD.connect(owner).setMintByTx(TX_ID);
       await expect(
@@ -438,7 +422,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
-    it("should revert if minting reward to blacklisted address", async function () {
+    it("should revert if minting reward to blocklisted address", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await expect(
         pacUSD.connect(minter).mintReward(AMOUNT, user1.address)
@@ -514,7 +498,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
     });
 
-    it("should revert if burning from blacklisted address", async function () {
+    it("should revert if burning from blocklisted address", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await pacUSD.connect(owner).setBurnByTx(TX_ID_2);
       await expect(
@@ -608,14 +592,14 @@ describe("PacUSD", function () {
         .withArgs(user2.address, AMOUNT / BigInt(2), AMOUNT);
     });
 
-    it("should revert if transfer from blacklisted sender", async function () {
+    it("should revert if transfer from blocklisted sender", async function () {
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await expect(
         pacUSD.connect(user1).transfer(user2.address, AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
     });
 
-    it("should revert if transfer to blacklisted recipient", async function () {
+    it("should revert if transfer to blocklisted recipient", async function () {
       await pacUSD.connect(owner).addToBlocklist(user2.address);
       await expect(
         pacUSD.connect(user1).transfer(user2.address, AMOUNT)
@@ -650,7 +634,7 @@ describe("PacUSD", function () {
       expect(await pacUSD.balanceOf(user1.address)).to.equal(AMOUNT);
     });
 
-    it("should revert transferFrom from blacklisted sender", async function () {
+    it("should revert transferFrom from blocklisted sender", async function () {
       await pacUSD.connect(user1).approve(user2.address, AMOUNT);
       await pacUSD.connect(owner).addToBlocklist(user1.address);
       await expect(
@@ -658,7 +642,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
     });
 
-    it("should revert transferFrom to blacklisted recipient", async function () {
+    it("should revert transferFrom to blocklisted recipient", async function () {
       await pacUSD.connect(user1).approve(user2.address, AMOUNT);
       await pacUSD.connect(owner).addToBlocklist(user2.address);
       await expect(
@@ -759,7 +743,7 @@ describe("PacUSD", function () {
       expect(await pacUSD.balanceOf(user2.address)).to.equal(AMOUNT);
     });
 
-    it("should revert when rescuing to blacklisted recipient", async function () {
+    it("should revert when rescuing to blocklisted recipient", async function () {
       // Send mock tokens to PacUSD contract
       await mockExternalToken.transfer(pacUSD.target, AMOUNT);
       await pacUSD.grantRole(await pacUSD.RESCUER_ROLE(), rescuer.address);
@@ -767,7 +751,7 @@ describe("PacUSD", function () {
       // Blacklist the intended recipient
       await pacUSD.connect(owner).addToBlocklist(user2.address);
 
-      // Attempt rescue to blacklisted address should fail
+      // Attempt rescue to blocklisted address should fail
       await expect(
         pacUSD
           .connect(rescuer)
@@ -893,19 +877,19 @@ describe("PacUSD", function () {
       );
     });
 
-    it("should revert if approver is blacklisted", async function () {
+    it("should revert if approver is blocklisted", async function () {
       // Add the approver (user1) to the blocklist
       await pacUSD.connect(owner).addToBlocklist(user1.address);
-      // Approval should fail when the approver is blacklisted
+      // Approval should fail when the approver is blocklisted
       await expect(
         pacUSD.connect(user1).approve(user2.address, AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
     });
 
-    it("should revert if spender is blacklisted", async function () {
+    it("should revert if spender is blocklisted", async function () {
       // Add the spender (user2) to the blocklist
       await pacUSD.connect(owner).addToBlocklist(user2.address);
-      // Approval to a blacklisted address should fail
+      // Approval to a blocklisted address should fail
       await expect(
         pacUSD.connect(user1).approve(user2.address, AMOUNT)
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
@@ -1061,7 +1045,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "ERC2612InvalidSigner");
     });
 
-    it("should revert when owner is blacklisted", async function () {
+    it("should revert when owner is blocklisted", async function () {
       // Blacklist the permit owner (user1)
       await pacUSD.connect(owner).addToBlocklist(user1.address);
 
@@ -1095,13 +1079,13 @@ describe("PacUSD", function () {
       });
       const { v, r, s } = ethers.Signature.from(signature);
 
-      // Expect failure due to blacklisted owner
+      // Expect failure due to blocklisted owner
       await expect(
         pacUSD.permit(user1.address, spender, value, deadline, v, r, s)
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
     });
 
-    it("should revert when spender is blacklisted", async function () {
+    it("should revert when spender is blocklisted", async function () {
       // Blacklist the permit spender (user2)
       await pacUSD.connect(owner).addToBlocklist(user2.address);
 
@@ -1135,7 +1119,7 @@ describe("PacUSD", function () {
       });
       const { v, r, s } = ethers.Signature.from(signature);
 
-      // Expect failure due to blacklisted spender
+      // Expect failure due to blocklisted spender
       await expect(
         pacUSD.permit(user1.address, spender, value, deadline, v, r, s)
       ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");

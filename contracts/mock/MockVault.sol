@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 import {IPacUSDStaking} from "../v1/staking/interfaces/IPacUSDStaking.sol";
 import {IPricer} from "../interfaces/IPricer.sol";

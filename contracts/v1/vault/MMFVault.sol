@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -59,7 +59,7 @@ contract MMFVault is
      * @param mmfTokenAddress Address of the MMF token contract
      * @param pacUSDTokenAddress Address of the PacUSD token contract
      * @param pricerAddress Address of the pricer contract
-     * @param ownerAddress Address to assign owner
+     * @param admin Address to assign admin
      * @param upgrader The address to upgrade contract
      */
     function initialize(
@@ -67,7 +67,7 @@ contract MMFVault is
         address pacUSDTokenAddress,
         address pricerAddress,
         address stakingAddress,
-        address ownerAddress,
+        address admin,
         address upgrader
     ) public initializer {
         if (
@@ -75,7 +75,7 @@ contract MMFVault is
             pacUSDTokenAddress == address(0) ||
             pricerAddress == address(0) ||
             stakingAddress == address(0) ||
-            ownerAddress == address(0) ||
+            admin == address(0) ||
             upgrader == address(0)
         ) revert ZeroAddress();
         __Ownable_init(upgrader);
@@ -95,7 +95,7 @@ contract MMFVault is
         if (lastPrice < PRICER_PRECISION) {
             revert InvalidPrice();
         }
-        _grantRole(DEFAULT_ADMIN_ROLE, ownerAddress);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     /**
@@ -110,7 +110,7 @@ contract MMFVault is
      * @notice Pauses the contract
      * @dev Only callable by pauser role
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
@@ -118,7 +118,7 @@ contract MMFVault is
      * @notice Unpauses the contract
      * @dev Only callable by pauser role
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
@@ -210,6 +210,9 @@ contract MMFVault is
         uint256 mmfAmount = (amount * mmfTokenPrecision * PRICER_PRECISION) /
             price /
             pacUSDPrecision;
+        if (mmfAmount > _totalMMFToken) {
+            revert InsufficientBalance();
+        }
         _totalMMFToken -= mmfAmount;
         pacUSDToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.burnByTx(txId, amount, address(this));
@@ -227,11 +230,10 @@ contract MMFVault is
         if (currentPrice < lastPrice) revert InvalidPrice();
         if (currentPrice == lastPrice) return; // No price change, no reward
         if (currentPrice > lastPrice) {
-            uint256 balance = mmfToken.balanceOf(address(this));
-            if (balance > uint256(0)) {
+            if (_totalMMFToken > uint256(0)) {
                 uint256 priceDifference = currentPrice - lastPrice;
                 uint256 rewardAmount = (priceDifference *
-                    balance *
+                    _totalMMFToken *
                     pacUSDPrecision) /
                     mmfTokenPrecision /
                     PRICER_PRECISION;
@@ -244,7 +246,7 @@ contract MMFVault is
                     rewardAmount,
                     tempLastPrice,
                     currentPrice,
-                    balance
+                    _totalMMFToken
                 );
             } else {
                 lastPrice = currentPrice; //need update price
@@ -267,4 +269,4 @@ contract MMFVault is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
-}
+}   

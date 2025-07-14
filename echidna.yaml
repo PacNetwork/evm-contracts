@@ -1,0 +1,3 @@
+# Coverage settings
+coverage: true       # Enables code coverage tracking
+corpusDir: "corpus"  # Directory to store the test corpus for coverage and replay

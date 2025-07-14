@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -124,7 +124,7 @@ interface IPacUSD {
     /**
      * @dev Emergency withdrawal of tokens held by the contract, designed to handle exceptional
      * situations such as tokens being locked or stuck. This method can only be called by
-     * addresses with the RESCUER_ROLE and prevents transfers to blacklisted addresses.
+     * addresses with the RESCUER_ROLE and prevents transfers to blocklisted addresses.
      *
      * @param tokenContract The address of the token contract to be rescued
      * @param to The recipient address for the tokens

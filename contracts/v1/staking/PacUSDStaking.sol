@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -388,7 +388,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         // get the entry reward rate
         uint256 entryRewardRate = entryRewardRates[user];
 
-        // current accumulated reward rate must not be less than the entry reward rate
+        // current accumulated reward rate must not be larger than the entry reward rate
         if (entryRewardRate > accumulatedRewardRate)
             revert InvalidRewardRate(entryRewardRate, accumulatedRewardRate);
 

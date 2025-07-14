@@ -1,15 +1,15 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 interface IPacUSDStaking {
     error ZeroAmount();
     error InvalidArrayLength();
 
-    /// @notice revert when the attested is larger than the reference
-    error InvalidRewardRate(uint256 attested, uint256 ref);
-    
     /// @notice revert when the attested is less than the reference
-    error InvalidTokenSupply(uint256 attested, uint256 ref);
+    error InvalidTokenSupply(uint256 totalSupply, uint256 totalStaked);
+
+    /// @notice revert when the attested is less than the reference
+    error InvalidRewardRate(uint256 attested, uint256 ref);
     
     /// @notice revert when the amount is larger than the staking balance
     error InsufficientStakingBalance(

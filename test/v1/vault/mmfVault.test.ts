@@ -89,6 +89,7 @@ describe("MMFVault", () => {
     )) as unknown as MMFVault;
 
     await MMFVault.waitForDeployment();
+    await MMFVault.grantRole(await MMFVault.PAUSER_ROLE(), pauser.address);
 
     // Initialize PacUSD with MMFVault as minter
     await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target]);
@@ -242,11 +243,11 @@ describe("MMFVault", () => {
   });
 
   describe("Access Control", () => {
-    it("should allow admin to pause and unpause", async () => {
-      await MMFVault.connect(owner).pause();
+    it("should allow pauser to pause and unpause", async () => {
+      await MMFVault.connect(pauser).pause();
       expect(await MMFVault.paused()).to.be.true;
 
-      await MMFVault.connect(owner).unpause();
+      await MMFVault.connect(pauser).unpause();
       expect(await MMFVault.paused()).to.be.false;
     });
 
@@ -294,7 +295,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
       await PacUSD.connect(owner).setMintByTx(txId);
       await expect(
@@ -417,7 +418,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       const txId = await generateTXId(
         user2.address,
         PACUSD_AMOUNT,
@@ -569,7 +570,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
         MMFVault,
         "EnforcedPause"
