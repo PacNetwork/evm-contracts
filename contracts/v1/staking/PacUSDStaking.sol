@@ -39,7 +39,6 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     mapping(address => uint256) internal stakingTimestamps;
 
     mapping(address => uint256) internal rewardBalances;
-    mapping(address => uint256) internal allowedUnstakedAmounts;
     mapping(address => uint256) internal entryRewardRates;
 
     uint256[50] private __gap; // Reserve space for future variables
