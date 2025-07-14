@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 /**
@@ -16,6 +16,7 @@ interface IMMFVault {
 
     // Events
     event MintPacUSD(
+        address indexed from,
         bytes32 indexed txId,
         address indexed to,
         uint256 timestamp,
@@ -23,14 +24,21 @@ interface IMMFVault {
         uint256 pacUSDAmount
     );
     event RedeemMMF(
+        address indexed from,
         bytes32 indexed txId,
         address indexed to,
         uint256 timestamp,
         uint256 pacUSDAmount,
         uint256 mmfAmount
     );
-    event RewardMinted(address indexed to, uint256 amount);
- 
+    event RewardMinted(
+        address indexed to,
+        uint256 amount,
+        uint256 lastPrice,
+        uint256 currentPrice,
+        uint256 balance
+    );
+
     /**
      * @notice Pauses the contract, preventing minting, redeeming, and reward distribution
      * @dev Only callable by accounts with PAUSER_ROLE, emits a Paused event
@@ -79,5 +87,16 @@ interface IMMFVault {
      */
     function mintReward() external;
 
+    /**
+     * @notice Gets the implementation version of the contract
+     * @return versionString The semantic version string (e.g., "v1", "v2.1")
+     */
+    function version() external pure returns (string memory versionString);
 
+    /**
+     * @notice Retrieve the total amount of MMF tokens stored in the Vault through swaps by all users
+     * @dev This function queries and returns the cumulative balance of MMF tokens that all users have deposited into the designated Vault contract via token swaps
+     * @return A uint256 value representing the total quantity of MMF tokens currently held in the Vault
+     */
+    function totalMMFToken() external view returns (uint256);
 }

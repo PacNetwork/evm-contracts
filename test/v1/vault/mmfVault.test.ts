@@ -13,7 +13,7 @@ import {
   MockStaking__factory,
   MMFVault,
   MMFVault__factory,
-} from "../typechain-types";
+} from "../../../typechain-types";
 
 describe("MMFVault", () => {
   let MMFVault: MMFVault;
@@ -21,7 +21,7 @@ describe("MMFVault", () => {
   let PacUSD: PacUSD;
   let Pricer: MockPricer;
   let Staking: MockStaking;
-  let admin: SignerWithAddress;
+  let upgrader: SignerWithAddress;
   let owner: SignerWithAddress;
   let pauser: SignerWithAddress;
   let user1: SignerWithAddress;
@@ -48,7 +48,7 @@ describe("MMFVault", () => {
   };
 
   beforeEach(async () => {
-    [owner, admin, pauser, user1, user2] = await ethers.getSigners();
+    [owner, upgrader, pauser, user1, user2] = await ethers.getSigners();
 
     // Deploy mock ERC20 token (MMFToken)
     const MockERC20Factory = (await ethers.getContractFactory(
@@ -89,7 +89,7 @@ describe("MMFVault", () => {
         Pricer.target,
         Staking.target,
         owner.address,
-        admin.address,
+        upgrader.address,
       ],
       { initializer: "initialize", kind: "uups" }
     )) as unknown as MMFVault;
@@ -97,10 +97,10 @@ describe("MMFVault", () => {
     await MMFVault.waitForDeployment();
 
     // Initialize PacUSD with MMFVault as minter
-    await PacUSD.initialize(owner.address, admin.address, [MMFVault.target]);
+    await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target]);
 
     await PacUSD.grantRole(await PacUSD.PAUSER_ROLE(), owner.address);
-    await PacUSD.grantRole(await PacUSD.BLACKLISTER_ROLE(), owner.address);
+    await PacUSD.grantRole(await PacUSD.BLOCKLISTER_ROLE(), owner.address);
     await PacUSD.grantRole(await PacUSD.APPROVER_ROLE(), owner.address);
     await PacUSD.grantRole(await PacUSD.RESCUER_ROLE(), owner.address);
 
@@ -120,6 +120,7 @@ describe("MMFVault", () => {
       expect(await MMFVault.mmfToken()).to.equal(MMFToken.target);
       expect(await MMFVault.pacUSDToken()).to.equal(PacUSD.target);
       expect(await MMFVault.pricer()).to.equal(Pricer.target);
+      expect(await MMFVault.version()).to.equal("v1");
       expect(
         await MMFVault.hasRole(
           await MMFVault.DEFAULT_ADMIN_ROLE(),
@@ -142,7 +143,7 @@ describe("MMFVault", () => {
             Pricer.target,
             Staking.target,
             owner.address,
-            admin.address,
+            upgrader.address,
           ],
           { initializer: "initialize", kind: "uups" }
         )
@@ -157,7 +158,7 @@ describe("MMFVault", () => {
             Pricer.target,
             Staking.target,
             owner.address,
-            admin.address,
+            upgrader.address,
           ],
           { initializer: "initialize", kind: "uups" }
         )
@@ -172,7 +173,7 @@ describe("MMFVault", () => {
             ZERO_ADDRESS,
             Staking.target,
             owner.address,
-            admin.address,
+            upgrader.address,
           ],
           { initializer: "initialize", kind: "uups" }
         )
@@ -187,7 +188,7 @@ describe("MMFVault", () => {
             Pricer.target,
             ZERO_ADDRESS,
             owner.address,
-            admin.address,
+            upgrader.address,
           ],
           { initializer: "initialize", kind: "uups" }
         )
@@ -202,7 +203,7 @@ describe("MMFVault", () => {
             Pricer.target,
             Staking.target,
             ZERO_ADDRESS,
-            admin.address,
+            upgrader.address,
           ],
           { initializer: "initialize", kind: "uups" }
         )
@@ -222,6 +223,27 @@ describe("MMFVault", () => {
           { initializer: "initialize", kind: "uups" }
         )
       ).to.be.revertedWithCustomError(MMFVault, "ZeroAddress");
+    });
+
+    it("should revert if price less than 1 usdt", async () => {
+      const MMFVaultFactory = (await ethers.getContractFactory(
+        "MMFVault"
+      )) as MMFVault__factory;
+      await Pricer.setPrice(parseEther("0.1"));
+      await expect(
+        upgrades.deployProxy(
+          MMFVaultFactory,
+          [
+            MMFToken.target,
+            PacUSD.target,
+            Pricer.target,
+            Staking.target,
+            owner.address,
+            upgrader.address,
+          ],
+          { initializer: "initialize", kind: "uups" }
+        )
+      ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
     });
   });
 
@@ -264,7 +286,14 @@ describe("MMFVault", () => {
         )
       )
         .to.emit(MMFVault, "MintPacUSD")
-        .withArgs(txId, user2.address, TIMESTAMP, MMF_AMOUNT, PACUSD_AMOUNT);
+        .withArgs(
+          user1.address,
+          txId,
+          user2.address,
+          TIMESTAMP,
+          MMF_AMOUNT,
+          PACUSD_AMOUNT
+        );
 
       expect(await MMFToken.balanceOf(MMFVault.target)).to.equal(MMF_AMOUNT);
       expect(await PacUSD.balanceOf(user2.address)).to.equal(PACUSD_AMOUNT);
@@ -348,7 +377,6 @@ describe("MMFVault", () => {
         )
       ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
     });
-
   });
 
   describe("redeemMMF", () => {
@@ -379,7 +407,14 @@ describe("MMFVault", () => {
         )
       )
         .to.emit(MMFVault, "RedeemMMF")
-        .withArgs(txId, user1.address, TIMESTAMP, PACUSD_AMOUNT, MMF_AMOUNT);
+        .withArgs(
+          user2.address,
+          txId,
+          user1.address,
+          TIMESTAMP,
+          PACUSD_AMOUNT,
+          MMF_AMOUNT
+        );
 
       expect(await MMFToken.balanceOf(user1.address)).to.equal(
         parseEther("1000")
@@ -493,7 +528,13 @@ describe("MMFVault", () => {
       await Pricer.setPrice(parseEther("3")); // lastPrice = 2, currentPrice = 3
       await expect(MMFVault.mintReward())
         .to.emit(MMFVault, "RewardMinted")
-        .withArgs(Staking.target, parseEther("100")); // (3-2) * 100 MMF
+        .withArgs(
+          Staking.target,
+          parseEther("100"),
+          parseEther("2"),
+          parseEther("3"),
+          MMF_AMOUNT
+        ); // (3-2) * 100 MMF
       expect(await MMFVault.lastPrice()).to.equal(parseEther("3"));
       expect(await Staking.updateCalled()).to.be.true;
     });
@@ -513,12 +554,10 @@ describe("MMFVault", () => {
       );
     });
 
-    it("should revert if mmfVault balance is zero", async () => {
+    it("should update price if mmfVault balance is zero", async () => {
       await Pricer.setPrice(parseEther("3"));
-      await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
-        MMFVault,
-        "ZeroBalance"
-      );
+      await MMFVault.mintReward();
+      expect(await MMFVault.lastPrice()).to.equal(parseEther("3"));
     });
 
     it("should revert on share calculation overflow", async () => {
@@ -546,13 +585,16 @@ describe("MMFVault", () => {
 
   describe("UUPS Upgradeability", function () {
     it("should allow admin to authorize upgrade", async function () {
-      const MMFVaultV2 = await ethers.getContractFactory("MMFVault", admin);
+      const MMFVaultV2 = await ethers.getContractFactory(
+        "MMFVault",
+        upgrader
+      );
       await expect(
         upgrades.upgradeProxy(MMFVault.target, MMFVaultV2, { kind: "uups" })
       ).to.not.be.reverted;
     });
 
-    it("should revert if non-admin tries to upgrade", async function () {
+    it("should revert if non-upgrader tries to upgrade", async function () {
       const MMFVaultV2 = await ethers.getContractFactory("MMFVault", user1);
       await expect(
         upgrades.upgradeProxy(MMFVault.target, MMFVaultV2, { kind: "uups" })

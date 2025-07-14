@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.28;
+
+interface IDeployFactory {
+    // Event emitted upon successful deployment
+    event ContractsDeployed(address indexed sender, address proxy);
+    // Errors
+    error InvaildParams();
+    error DeploymentFailed();
+    error ZeroAddress();
+    error InitializationFailed();
+    error ImplAddressError(address expect, address fact);
+    error ProxyAddressError(address expect, address fact);
+    error Code(address codeHash);
+    error NotOwner();
+}

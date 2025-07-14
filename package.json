@@ -3,7 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "abi": "hardhat export-abi",
+    "compile": "hardhat compile --force --quiet",
+    "test:v1scene": "hardhat run scripts/v1/scene/scene_test.ts  --network localhost",
+    "deploy": "hardhat run scripts/deploy/deploy_local.ts --network localhost",
+    "deploy:mainnet": "hardhat run scripts/deploy/deploy.ts --network mainnet",
+    "deploy:sepolia": "hardhat run scripts/deploy/deploy.ts --network sepolia",
+    "upgradePacUSD:sepolia": "hardhat run scripts/upgrade/upgrade_pacusd.ts --network sepolia",
+    "upgradeVault:sepolia": "hardhat run scripts/upgrade/upgrade_vault.ts --network sepolia",
+    "upgradeStaking:sepolia": "hardhat run scripts/upgrade/upgrade_staking.ts --network sepolia",
+    "coverage": "npm run compile && npx hardhat coverage"
   },
   "directories": {
     "lib": "lib",
@@ -16,11 +27,31 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.24.2",
-    "solidity-coverage": "^0.8.14",
-    "dotenv": "^16.4.7",
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-ignition": "^0.15.12",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/ignition-core": "^0.15.12",
     "@openzeppelin/hardhat-upgrades": "^3.9.0",
-    "@nomicfoundation/hardhat-ethers": "^3.0.8"
+    "@safe-global/api-kit": "^4.0.0",
+    "@safe-global/protocol-kit": "^6.1.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "chai": "^4.2.0",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.14.0",
+    "hardhat": "^2.25.0",
+    "hardhat-abi-exporter": "^2.11.0",
+    "hardhat-gas-reporter": "^2.3.0",
+    "solidity-coverage": "^0.8.14",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.0",
+    "typescript": "^5.8.3",
+    "viem": "^2.31.6"
   }
 }

@@ -6,23 +6,6 @@ A minimal viable product for a contract system, integrating token swapping, stak
 
 This project extends the Camel Contract system with a factory-based deployment mechanism, enabling predictable contract addresses and streamlined upgrades. The solution now includes a `DeployFactory` contract that uses CREATE2 to deploy proxy instances of `PacUSD` and `MMFVault`, ensuring address determinism and upgradeability via the UUPS pattern.
 
-### Key Features
-
-- **Factory-Driven Deployment**: `DeployFactory` uses CREATE2 to deploy contracts with predictable addresses, incorporating sender and salt parameters.
-- **Proxy Architecture**: Both `PacUSD` and `MMFVault` are deployed via ERC1967 proxies, supporting safe upgrades without changing addresses.
-- **Enhanced Security**: Strict input validation and role-based access control (Admin, Pauser, Minter, etc.).
-- **Predictable Address Calculation**: Precompute deployment addresses using `computePacUSDAddress` and `computeMMFVaultAddress` methods.
-- **Comprehensive Testing**: Unit tests for deployment logic, upgradeability, and contract initialization.
-
-## Contract Architecture
-
-The project now includes the following core components:
-
-- **`DeployFactory.sol`**: Factory contract for deploying `PacUSD` and `MMFVault` proxies using CREATE2.
-- **`PacUSD.sol`**: Stablecoin contract with minting, burning, blacklisting, and transaction tracking.
-- **`MMFVault.sol`**: Main vault for token swapping, staking, and reward distribution.
-- **Proxies**: ERC1967 proxies for upgradeability, deployed via CREATE2 for address predictability.
-
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/en/) (v18 or higher)
@@ -35,7 +18,7 @@ The project now includes the following core components:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/black-domain/camel-contract-m2-v2.git
+   git clone ${url}
    cd camel-contract-v2
    ```
 
@@ -53,36 +36,20 @@ npx hardhat compile
 
 This will generate TypeChain typings for all contracts, in the `typechain-types/` directory.
 
-## Running Tests
-
-### Test Suite Overview
-
-The test suite now includes:
-
-1. **`DeployFactory` Tests**:
-   - Address predictability with CREATE2 and sender-specific salts.
-   - Zero address input validation.
-   - UUPS upgradeability for proxied contracts.
-   - Contract initialization correctness.
-
-2. **`PacUSD` and `MMFVault` Tests**:
-   - Initialization and role assignment.
-   - Token swapping and reward distribution.
-   - Emergency pause functionality.
-   - Upgradeability via admin roles.
+##  Tests
 
 ### Running Tests
 
 To execute all tests:
 ```bash
-npx hardhat test
+npm run test
 ```
 
 ### Test Coverage
 
 To generate coverage reports:
 ```bash
-npx hardhat coverage
+npm run coverage
 ```
 
 ## Deploying Contracts
@@ -91,35 +58,37 @@ npx hardhat coverage
 
 First, configure your environment variables in a `.env` file (refer to `.env.example` for structure):
 ```env
-DEPLOYER_PRIVATE_KEY=your-deployer-private-key
 MMFTOKEN_ADDRESS=MMF-token-contract-address
 PRICER_ADDRESS=pricer-contract-address
 STAKING_ADDRESS=staking-contract-address
 OWNER_ADDRESS=initial-owner-address
-ADMIN_ADDRESS=admin-address-for-upgrades
+UPGRADER_ADDRESS=upgrader-address
 APPROVER_ADDRESS=approver-role-address
 PAUSER_ADDRESS=pauser-role-address
 RESCUER_ADDRESS=rescuer-role-address
 BLACKLISTER_ADDRESS=blacklister-role-address
+
+MMFTOKEN_ADDRESS= mmftoken-address
+PRICER_ADDRESS=pricer-address
 ```
 
 ### Local Development (Hardhat Network)
 
 1. Start the local node:
    ```bash
-   npx hardhat node
-   ```
-
+   npm run node
+   ```   
 2. Deploy contracts using the factory script:
    ```bash
-   npx hardhat run scripts/deploy.ts
+   npm run deploy
    ```
+    **Configure the mock contract to .env**
 
 ### Custom Network
 
 Configure the network in `hardhat.config.js` and deploy:
 ```bash
-npx hardhat run scripts/deploy.js --network <network-name>
+npm run deploy:{network}
 ```
 
 ## Project Structure
@@ -127,17 +96,26 @@ npx hardhat run scripts/deploy.js --network <network-name>
 ```
 camel-contract-v2/
 ├── contracts/                # Smart contracts
+│   ├── helper/               # Helper contracts
 │   ├── interface/            # Contract interfaces
-│   ├── PacUSD.sol            # Stablecoin implementation
-│   ├── MMFVault.sol          # Main vault for token swapping
-│   └── DeployFactory.sol     # Factory for deploying proxied contracts
+│   ├── mock/                 # Mock contracts
+│   └── v1/                   # V1 version contracts
+│       ├── factory/          # Address and deploy factory contracts
+│       ├── pacusd/           # PacUsd contracts
+│       ├── staking/          # PacUSDStaking contracts
+│       └── vault/            # MMFVault contracts
 ├── scripts/                  # Deployment and utility scripts
-│   └── deploy.ts             # Main deployment script using DeployFactory
+│   ├── deploy/               # Deploy scripts
+│   ├── upgrade/              # Contract upgrade scripts
+│   ├── utils/                # Script utils
+│   └── v1/                   # V1 scripts
+│       └── scene/            # Product scene test scripts
 ├── test/                     # Test cases
-│   ├── PacUSD.test.ts        # Tests for PacUSD
-│   ├── MMFVault.test.ts      # Tests for MMFVault
-│   └── DeployFactory.test.ts # Tests for deployment logic
-├── typechain-types/          # Generated TypeChain typings
+│   └── v1/                   # V1 version test cases
+│       ├── factory/          # Address factory test cases
+│       ├── pacusd/           # PacUsd test cases
+│       ├── staking/          # PacUSDStaking test cases
+│       └── vault/            # MMFVault test cases
 ├── hardhat.config.js         # Hardhat configuration
 ├── .env                      # Environment variables (based on .env.example)
 ├── package.json              # Project dependencies
