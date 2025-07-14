@@ -159,9 +159,7 @@ abstract contract BaseFuzz {
             UPGRADER,
             ADMIN,  // Admin role
             RESERVE,
-            vaults,
-            pricers,
-            mmfTokens
+            vaults
         );
     }
 

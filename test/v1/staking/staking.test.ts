@@ -1,4 +1,4 @@
-import { expect, use } from "chai";
+import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { Signer } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
@@ -10,7 +10,6 @@ import {
   PacUSDStaking,
   MockPacUSDStakingV2,
   MockVault,
-  MockVault__factory,
 } from "../../../typechain-types";
 
 describe("PacUSDStaking", function () {
@@ -38,7 +37,6 @@ describe("PacUSDStaking", function () {
   // Constant definitions
   const ONE_DAY = 86400;
   const PRECISION = ethers.parseEther("1");
-  const RATE_PRECISION = PRECISION * PRECISION;
   const INITIAL_PRICE = PRECISION;
 
   // Helper function: Generate PacUSD
@@ -82,8 +80,6 @@ describe("PacUSDStaking", function () {
     await mockMMFToken1.waitForDeployment();
     await mockMMFToken2.waitForDeployment();
 
-    const MockVaultFactory = await ethers.getContractFactory("MockVault");
-
     const MockPricerFactory = await ethers.getContractFactory("MockPricer");
     mockPricer1 = (await MockPricerFactory.deploy(INITIAL_PRICE)) as MockPricer;
     mockPricer2 = (await MockPricerFactory.deploy(INITIAL_PRICE)) as MockPricer;
@@ -103,31 +99,23 @@ describe("PacUSDStaking", function () {
     staking = (await StakingFactory.deploy()) as PacUSDStaking;
     await staking.waitForDeployment();
 
+    const MockVaultFactory = await ethers.getContractFactory("MockVault");
     vault1 = (await MockVaultFactory.deploy()) as MockVault;
     vault2 = (await MockVaultFactory.deploy()) as MockVault;
     await vault1.waitForDeployment();
     await vault2.waitForDeployment();
 
-    await vault1.init(staking);
-    await vault2.init(staking);
+    await vault1.init(staking, mockPacUSD, mockPricer1);
+    await vault2.init(staking, mockPacUSD, mockPricer2);
     const vaults = [await vault1.getAddress(), await vault2.getAddress()];
-    const pricers = [
-      await mockPricer1.getAddress(),
-      await mockPricer2.getAddress(),
-    ];
-    const mmfTokens = [
-      await mockMMFToken1.getAddress(),
-      await mockMMFToken2.getAddress(),
-    ];
+    
     await (
       await staking.initialize(
         await mockPacUSD.getAddress(),
         await owner.getAddress(),
         await admin.getAddress(),
         await reserve.getAddress(),
-        vaults,
-        pricers,
-        mmfTokens
+        vaults
       )
     ).wait();
     // Default add scheme1
@@ -175,14 +163,6 @@ describe("PacUSDStaking", function () {
       await newStaking.waitForDeployment();
       console.log(vault1, vault2);
       const vaults = [await vault1.getAddress(), await vault2.getAddress()];
-      const pricers = [
-        await mockPricer1.getAddress(),
-        await mockPricer2.getAddress(),
-      ];
-      const mmfTokens = [
-        await mockMMFToken1.getAddress(),
-        await mockMMFToken2.getAddress(),
-      ];
       const tokenAddr = await mockPacUSD.getAddress();
       const upgraderAddr = await owner.getAddress();
       const adminAddr = await admin.getAddress();
@@ -195,9 +175,7 @@ describe("PacUSDStaking", function () {
           upgraderAddr,
           adminAddr,
           reserveAddr,
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).not.to.be.reverted;
 
@@ -206,15 +184,9 @@ describe("PacUSDStaking", function () {
       expect(await newStaking.RESERVE()).to.equal(reserveAddr);
       expect(await newStaking.minStakingPeriod()).to.equal(ONE_DAY); // Default 1 day
 
-      // Verify vault to pricer/mmfToken mappings
-      expect(await newStaking.PRICERS(vaults[0])).to.equal(pricers[0]);
-      expect(await newStaking.PRICERS(vaults[1])).to.equal(pricers[1]);
-      expect(await newStaking.MMFTOKENS(vaults[0])).to.equal(mmfTokens[0]);
-      expect(await newStaking.MMFTOKENS(vaults[1])).to.equal(mmfTokens[1]);
-
       // Verify updater role
-      expect(await newStaking.isUpdater(vaults[0])).to.be.true;
-      expect(await newStaking.isUpdater(vaults[1])).to.be.true;
+      expect(await newStaking.UPDATERS(vaults[0])).to.be.true;
+      expect(await newStaking.UPDATERS(vaults[1])).to.be.true;
     });
 
     // Exception case 1: Empty vaults array
@@ -224,8 +196,6 @@ describe("PacUSDStaking", function () {
       await newStaking.waitForDeployment();
 
       const vaults: string[] = []; // Empty vaults array
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [await mockMMFToken1.getAddress()];
       const tokenAddr = await mockPacUSD.getAddress();
 
       await expect(
@@ -234,63 +204,7 @@ describe("PacUSDStaking", function () {
           await owner.getAddress(),
           await admin.getAddress(),
           await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
-        )
-      ).to.be.revertedWithCustomError(newStaking, "InvalidArrayLength");
-    });
-
-    // Exception case 2: Mismatch between vaults and pricers lengths
-    it("should revert when vaults length != pricers length", async function () {
-      const StakingFactory = await ethers.getContractFactory("PacUSDStaking");
-      const newStaking = (await StakingFactory.deploy()) as PacUSDStaking;
-      await newStaking.waitForDeployment();
-
-      const vaults = [await vault1.getAddress(), await vault2.getAddress()]; // 2 vaults
-      const pricers = [await mockPricer1.getAddress()]; // 1 pricer (length mismatch)
-      const mmfTokens = [
-        await mockMMFToken1.getAddress(),
-        await mockMMFToken2.getAddress(),
-      ];
-      const tokenAddr = await mockPacUSD.getAddress();
-
-      await expect(
-        newStaking.initialize(
-          tokenAddr,
-          await owner.getAddress(),
-          await admin.getAddress(),
-          await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
-        )
-      ).to.be.revertedWithCustomError(newStaking, "InvalidArrayLength");
-    });
-
-    // Exception case 3: Mismatch between vaults and mmfTokens lengths
-    it("should revert when vaults length != mmfTokens length", async function () {
-      const StakingFactory = await ethers.getContractFactory("PacUSDStaking");
-      const newStaking = (await StakingFactory.deploy()) as PacUSDStaking;
-      await newStaking.waitForDeployment();
-
-      const vaults = [await vault1.getAddress(), await vault2.getAddress()]; // 2 vaults
-      const pricers = [
-        await mockPricer1.getAddress(),
-        await mockPricer2.getAddress(),
-      ];
-      const mmfTokens = [await mockMMFToken1.getAddress()]; // 1 mmfToken (length mismatch)
-      const tokenAddr = await mockPacUSD.getAddress();
-
-      await expect(
-        newStaking.initialize(
-          tokenAddr,
-          await owner.getAddress(),
-          await admin.getAddress(),
-          await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).to.be.revertedWithCustomError(newStaking, "InvalidArrayLength");
     });
@@ -302,8 +216,6 @@ describe("PacUSDStaking", function () {
       await newStaking.waitForDeployment();
 
       const vaults = [await vault1.getAddress()];
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [await mockMMFToken1.getAddress()];
 
       await expect(
         newStaking.initialize(
@@ -311,9 +223,7 @@ describe("PacUSDStaking", function () {
           await owner.getAddress(),
           await admin.getAddress(),
           await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).to.be.revertedWithCustomError(newStaking, "ZeroAddress");
     });
@@ -325,8 +235,6 @@ describe("PacUSDStaking", function () {
       await newStaking.waitForDeployment();
 
       const vaults = [await vault1.getAddress()];
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [await mockMMFToken1.getAddress()];
       const tokenAddr = await mockPacUSD.getAddress();
 
       await expect(
@@ -335,9 +243,7 @@ describe("PacUSDStaking", function () {
           await owner.getAddress(),
           await admin.getAddress(),
           ethers.ZeroAddress, // Zero address reserve
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).to.be.revertedWithCustomError(newStaking, "ZeroAddress");
     });
@@ -349,8 +255,6 @@ describe("PacUSDStaking", function () {
       await newStaking.waitForDeployment();
 
       const vaults = [ethers.ZeroAddress]; // Vaults containing zero address
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [await mockMMFToken1.getAddress()];
       const tokenAddr = await mockPacUSD.getAddress();
 
       await expect(
@@ -359,98 +263,15 @@ describe("PacUSDStaking", function () {
           await owner.getAddress(),
           await admin.getAddress(),
           await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).to.be.revertedWithCustomError(newStaking, "ZeroAddress");
-    });
-
-    // Exception case 7: Pricers contain zero address
-    it("should revert when pricers contain zero address", async function () {
-      const StakingFactory = await ethers.getContractFactory("PacUSDStaking");
-      const newStaking = (await StakingFactory.deploy()) as PacUSDStaking;
-      await newStaking.waitForDeployment();
-
-      const vaults = [await vault1.getAddress()];
-      const pricers = [ethers.ZeroAddress]; // Pricers containing zero address
-      const mmfTokens = [await mockMMFToken1.getAddress()];
-      const tokenAddr = await mockPacUSD.getAddress();
-
-      await expect(
-        newStaking.initialize(
-          tokenAddr,
-          await owner.getAddress(),
-          await admin.getAddress(),
-          await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
-        )
-      ).to.be.revertedWithCustomError(newStaking, "ZeroAddress");
-    });
-
-    // Exception case 8: mmfTokens contain zero address
-    it("should revert when mmfTokens contain zero address", async function () {
-      const StakingFactory = await ethers.getContractFactory("PacUSDStaking");
-      const newStaking = (await StakingFactory.deploy()) as PacUSDStaking;
-      await newStaking.waitForDeployment();
-
-      const vaults = [await vault1.getAddress()];
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [ethers.ZeroAddress]; // mmfTokens containing zero address
-      const tokenAddr = await mockPacUSD.getAddress();
-
-      await expect(
-        newStaking.initialize(
-          tokenAddr,
-          await owner.getAddress(),
-          await admin.getAddress(),
-          await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
-        )
-      ).to.be.revertedWithCustomError(newStaking, "ZeroAddress");
-    });
-
-    // Exception case 9: Initial price below PRECISION
-    it("should revert when initial price < PRECISION", async function () {
-      // Deploy a pricer with initial price below PRECISION
-      const MockPricerFactory = await ethers.getContractFactory("MockPricer");
-      const badPricer = (await MockPricerFactory.deploy(
-        PRECISION / 2n
-      )) as MockPricer; // Price is 5e17 (less than 1e18)
-      await badPricer.waitForDeployment();
-
-      const StakingFactory = await ethers.getContractFactory("PacUSDStaking");
-      const newStaking = (await StakingFactory.deploy()) as PacUSDStaking;
-      await newStaking.waitForDeployment();
-
-      const vaults = [await vault1.getAddress()];
-      const pricers = [await badPricer.getAddress()]; // Use low price pricer
-      const mmfTokens = [await mockMMFToken1.getAddress()];
-      const tokenAddr = await mockPacUSD.getAddress();
-
-      await expect(
-        newStaking.initialize(
-          tokenAddr,
-          await owner.getAddress(),
-          await admin.getAddress(),
-          await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
-        )
-      ).to.be.revertedWithCustomError(newStaking, "InvalidPrice");
     });
 
     // Exception case 10: Re-initialization (calling initialize again after contract is initialized)
     it("should revert when initializing twice", async function () {
       // Use the staking contract already initialized in beforeEach
       const vaults = [await vault1.getAddress()];
-      const pricers = [await mockPricer1.getAddress()];
-      const mmfTokens = [await mockMMFToken1.getAddress()];
 
       await expect(
         staking.initialize(
@@ -458,9 +279,7 @@ describe("PacUSDStaking", function () {
           await owner.getAddress(),
           await admin.getAddress(),
           await reserve.getAddress(),
-          vaults,
-          pricers,
-          mmfTokens
+          vaults
         )
       ).to.be.reverted; // Depends on OpenZeppelin's initializer modifier, re-initialization will revert
     });
@@ -570,9 +389,7 @@ describe("PacUSDStaking", function () {
         await owner.getAddress(),
         await admin.getAddress(),
         await reserve.getAddress(),
-        [await vault1.getAddress()],
-        [await mockPricer1.getAddress()],
-        [await mockMMFToken1.getAddress()]
+        [await vault1.getAddress()]
       );
       // Authorize roles
       const PAUSER_ROLE = await newStaking.PAUSER_ROLE();
@@ -739,7 +556,10 @@ describe("PacUSDStaking", function () {
       // Trigger price update to generate rewards
       await mockPricer1.setPrice(INITIAL_PRICE * 3n); // Price increases significantly
 
-      await vault1.update();
+      const newReward = (INITIAL_PRICE * 3n - INITIAL_PRICE) *  (await vault1.total()) / PRECISION;
+      const rate = newReward * (await staking.RATE_PRECISION()) / (await mockPacUSD.totalSupply());
+      await expect(vault1.update()).to.emit(staking, "RewardDistributed")
+        .withArgs(vault1.target, newReward, rate);
     });
 
     // Normal scenario: Fully restake rewards
@@ -938,7 +758,7 @@ describe("PacUSDStaking", function () {
 
       // Execute update
       await mockPricer1.setPrice(newPrice);
-      await expect(vault1.update()).to.emit(staking, "Updated");
+      await expect(vault1.update()).to.emit(staking, "RewardDistributed");
 
       // Verify reserve rewards increase
       expect(await staking.rewardOf(await reserve.getAddress())).to.be.gt(0n);
@@ -979,26 +799,16 @@ describe("PacUSDStaking", function () {
     it("should revert when called by non-updater", async function () {
       // Regular user calls
       await expect(
-        staking.connect(user1).update()
+        staking.connect(user1).distributeReward(1n)
       ).to.be.revertedWithCustomError(staking, "NotUpdater");
       // Admin calls (non-vault role)
       await expect(
-        staking.connect(admin).update()
+        staking.connect(admin).distributeReward(1n)
       ).to.be.revertedWithCustomError(staking, "NotUpdater");
       // Unauthorized vault calls
       await expect(
-        staking.connect(user2).update()
+        staking.connect(user2).distributeReward(1n)
       ).to.be.revertedWithCustomError(staking, "NotUpdater");
-    });
-
-    // Exception case 2: Current price < last price (price decrease)
-    it("should revert when current price < last price", async function () {
-      const lowerPrice = INITIAL_PRICE / 2n; // Price halves
-      await mockPricer1.setPrice(lowerPrice);
-
-      await expect(vault1.update())
-        .to.be.revertedWithCustomError(staking, "InvalidPrice")
-        .withArgs(lowerPrice, INITIAL_PRICE); // Error parameters: current price, last price
     });
 
     // Exception case 3: Contract is paused
@@ -1017,7 +827,7 @@ describe("PacUSDStaking", function () {
       // Call update with unchanged price
       await vault1.update();
       // Verify no event emitted
-      await expect(vault1.update()).not.to.emit(staking, "Updated");
+      await expect(vault1.update()).not.to.emit(staking, "RewardDistributed");
     });
 
     // Exception case 6: Invalid reward scheme causes update failure
@@ -1052,7 +862,6 @@ describe("PacUSDStaking", function () {
       const scheme2 = await mockScheme2.getAddress();
       const scheme3 = await mockScheme3.getAddress();
 
-      // await staking.connect(rewardManager).addRewardScheme(scheme1);
       await staking.connect(rewardManager).addRewardScheme(scheme2);
       await staking.connect(rewardManager).addRewardScheme(scheme3);
 
@@ -1323,26 +1132,16 @@ describe("PacUSDStaking", function () {
       vault2 = (await MockVaultFactory.deploy()) as MockVault;
       await vault1.waitForDeployment();
       await vault2.waitForDeployment();
-      await vault1.init(v1Staking);
-      await vault2.init(v1Staking);
+      await vault1.init(v1Staking, mockPacUSD, mockPricer1);
+      await vault2.init(v1Staking, mockPacUSD, mockPricer2);
 
       const vaults = [await vault1.getAddress(), await vault2.getAddress()];
-      const pricers = [
-        await mockPricer1.getAddress(),
-        await mockPricer2.getAddress(),
-      ];
-      const mmfTokens = [
-        await mockMMFToken1.getAddress(),
-        await mockMMFToken2.getAddress(),
-      ];
       await v1Staking.initialize(
         await mockPacUSD.getAddress(),
         await upgrader.getAddress(), // Upgrader role
         await admin.getAddress(),
         await reserve.getAddress(),
-        vaults,
-        pricers,
-        mmfTokens
+        vaults
       );
 
       // 3. Simulate V1 state data (staking, rewards, etc.)
@@ -1363,8 +1162,7 @@ describe("PacUSDStaking", function () {
       const user1StakeV1 = await v1Staking.balanceOf(await user1.getAddress());
       const user1RewardV1 = await v1Staking.rewardOf(await user1.getAddress());
       const totalStakedV1 = await v1Staking.totalStaked();
-      const vault1PricerV1 = await v1Staking.PRICERS(await vault1.getAddress());
-
+      
       // 2. Perform upgrade to V2
       const V2Factory = await ethers.getContractFactory(
         "MockPacUSDStakingV2",
@@ -1387,12 +1185,8 @@ describe("PacUSDStaking", function () {
       );
       expect(await v2Staking.totalStaked()).to.equal(totalStakedV1);
 
-      expect(await v2Staking.PRICERS(await vault1.getAddress())).to.equal(
-        vault1PricerV1
-      );
-
       // 3.2 Roles and permissions preserved
-      expect(await v2Staking.isUpdater(await vault1.getAddress())).to.be.true;
+      expect(await v2Staking.UPDATERS(await vault1.getAddress())).to.be.true;
       expect(
         await v2Staking.hasRole(
           await v2Staking.DEFAULT_ADMIN_ROLE(),

@@ -13,6 +13,7 @@ interface IMMFVault {
     error ZeroAmount();
     error ZeroBalance();
     error InvalidPrice();
+    error RewardNotMinted();
 
     // Events
     event MintPacUSD(
