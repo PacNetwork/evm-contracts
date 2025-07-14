@@ -5,8 +5,11 @@ interface IPacUSDStaking {
     error ZeroAmount();
     error InvalidArrayLength();
 
-    /// @notice revert when the attested is less than the reference
+    /// @notice revert when the attested is larger than the reference
     error InvalidRewardRate(uint256 attested, uint256 ref);
+    
+    /// @notice revert when the attested is less than the reference
+    error InvalidTokenSupply(uint256 attested, uint256 ref);
     
     /// @notice revert when the amount is larger than the staking balance
     error InsufficientStakingBalance(
