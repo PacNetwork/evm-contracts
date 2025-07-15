@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
@@ -31,7 +31,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
      * @param mmfTokenAddresses Address of the MMF token contract
      * @param pricerAddresses Address of the price oracle contract
      * @param mmfVaultSalts Salt for deterministic address calculation
-     * @param ownerAddress Address to assign ownership and admin roles
+     * @param admin Address to assign  admin roles
      * @param upgrader Address for upgrade administration
      * @return mmfVaultProxy Address of the deployed MMFVault proxy contract
      */
@@ -39,7 +39,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
         address[] memory mmfTokenAddresses,
         address[] memory pricerAddresses,
         bytes32[] memory mmfVaultSalts,
-        address ownerAddress,
+        address admin,
         address upgrader
     ) external returns (address mmfVaultProxy) {
         if (msg.sender != owner) revert NotOwner();
@@ -50,7 +50,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             mmfTokenAddresses.length != pricerAddresses.length ||
             mmfTokenAddresses.length != mmfVaultSalts.length ||
             mmfTokenAddresses.length == 0 ||
-            ownerAddress == address(0) ||
+            admin == address(0) ||
             upgrader == address(0)
         ) revert InvaildParams();
 
@@ -114,7 +114,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
                         pacUSDAddress,
                         pricerAddress,
                         stakingAddress,
-                        ownerAddress,
+                        admin,
                         upgrader
                     )
                 )

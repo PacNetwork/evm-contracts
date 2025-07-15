@@ -1,5 +1,4 @@
-import { ethers, run, network } from "hardhat";
-import { Addressable, keccak256, toUtf8Bytes } from "ethers";
+import { ethers } from "hardhat";
 import { PacUSD, PacUSDStaking } from "../../../../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { config } from "dotenv";

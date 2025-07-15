@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
@@ -13,7 +13,7 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 
 /**
  * @title PacUSD
- * @notice A stablecoin contract implementing ERC20 with permit, role-based access control, pausing, blacklisting, and transaction state tracking.
+ * @notice A stablecoin contract implementing ERC20 with permit, role-based access control, pausing, blocklisting, and transaction state tracking.
  * @dev Inherits from OpenZeppelin upgradeable contracts for ERC20, permit, reentrancy guard, pausability, access control, and UUPS upgradeability.
  *      Implements IPacUSD interface for minting, burning, and rewarding functionality.
  */
@@ -37,8 +37,8 @@ contract PacUSD is
     // Minter addresses
     mapping(address => bool) private _minters;
 
-    // Blacklist mapping to freeze individual accounts
-    mapping(address => bool) private _blacklist;
+    // Blocklist mapping to freeze individual accounts
+    mapping(address => bool) private _blocklist;
     //Transaction state tracking
     uint256 private constant TX_STATE_DEFAULT = 0;
     uint256 private constant TX_STATE_AVAILABLE = 1;
@@ -57,17 +57,17 @@ contract PacUSD is
      * @notice Initializes the PacUSD contract with the given admin and minters.
      * @dev Sets up ERC20 token details, permit, reentrancy guard, pausability, access control, and UUPS upgradeability.
      *      Grants all roles to the default admin and configures minters. Only callable once during contract deployment.
-     * @param ownerAddress The address to receive all roles (, OWNER, PAUSER, BLACKLISTER, APPROVER, RESCUER).
+     * @param admin Address to assign admin
      * @param upgrader The address to upgrade contract
      * @param minters An array of addresses to be granted minter privileges.
      */
     function initialize(
-        address ownerAddress,
+        address admin,
         address upgrader,
         address[] memory minters
     ) public initializer {
         if (
-            ownerAddress == address(0) ||
+            admin == address(0) ||
             upgrader == address(0) ||
             minters.length == 0
         ) revert ZeroAddress();
@@ -79,7 +79,7 @@ contract PacUSD is
         __UUPSUpgradeable_init();
         __Ownable_init(upgrader);
         // Set up roles
-        _grantRole(DEFAULT_ADMIN_ROLE, ownerAddress);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
 
         uint256 length = minters.length;
         // Set minters
@@ -99,7 +99,7 @@ contract PacUSD is
     }
 
     /**
-     * @dev Throws if argument account is blacklisted.
+     * @dev Throws if argument account is blocklisted.
      * @param _account The address to check.
      */
     modifier notBlocklisted(address _account) {
@@ -133,42 +133,42 @@ contract PacUSD is
     }
 
     /**
-     * @notice Adds an account to the blacklist, preventing it from sending or receiving tokens.
-     * @dev Only callable by an account with BLACKLISTER_ROLE. Reverts if the account is the zero address.
-     *      Emits a Blacklisted event.
-     * @param account The address to blacklist.
+     * @notice Adds an account to the blocklist, preventing it from sending or receiving tokens.
+     * @dev Only callable by an account with BLOCKLISTER_ROLE. Reverts if the account is the zero address.
+     *      Emits a Blocklisted event.
+     * @param account The address to blocklist.
      */
     //Blocklister
     function addToBlocklist(
         address account
     ) external onlyRole(BLOCKLISTER_ROLE) {
         if (account == address(0)) revert ZeroAddress();
-        _blacklist[account] = true;
+        _blocklist[account] = true;
         emit AddToBlocklist(account);
     }
 
     /**
-     * @notice Removes an account from the blacklist, allowing it to send and receive tokens.
-     * @dev Only callable by an account with BLACKLISTER_ROLE. Reverts if the account is the zero address.
-     *      Emits an Unblacklisted event.
-     * @param account The address to remove from the blacklist.
+     * @notice Removes an account from the blocklist, allowing it to send and receive tokens.
+     * @dev Only callable by an account with BLOCKLISTER_ROLE. Reverts if the account is the zero address.
+     *      Emits an Unblocklisted event.
+     * @param account The address to remove from the blocklist.
      */
     function removeFromBlocklist(
         address account
     ) external onlyRole(BLOCKLISTER_ROLE) {
         if (account == address(0)) revert ZeroAddress();
-        _blacklist[account] = false;
+        _blocklist[account] = false;
         emit RemoveFromBlocklist(account);
     }
 
     /**
-     * @notice Checks if an account is blacklisted.
-     * @dev View function to query the blacklist status of an account.
+     * @notice Checks if an account is blocklisted.
+     * @dev View function to query the blocklist status of an account.
      * @param account The address to check.
-     * @return bool True if the account is blacklisted, false otherwise.
+     * @return bool True if the account is blocklisted, false otherwise.
      */
     function isBlocklisted(address account) public view returns (bool) {
-        return _blacklist[account];
+        return _blocklist[account];
     }
 
     /**
@@ -204,7 +204,7 @@ contract PacUSD is
     /**
      * @notice Mints tokens for a registered transaction ID.
      * @dev Only callable by a minter when not paused, with reentrancy protection.
-     *      Reverts if the caller is not a minter, the txId is invalid or executed, the recipient is blacklisted,
+     *      Reverts if the caller is not a minter, the txId is invalid or executed, the recipient is blocklisted,
      *      or the recipient is the zero address. Marks the txId as executed and emits a Mint event.
      * @param txId The transaction ID for the mint operation.
      * @param amount The amount of tokens to mint.
@@ -257,7 +257,7 @@ contract PacUSD is
     /**
      * @notice Burns tokens for a registered transaction ID.
      * @dev Only callable by a minter when not paused, with reentrancy protection.
-     *      Reverts if the caller is not a minter, the txId is invalid or executed, the sender is blacklisted,
+     *      Reverts if the caller is not a minter, the txId is invalid or executed, the sender is blocklisted,
      *      the sender is the zero address, or the sender has insufficient balance.
      *      Marks the txId as executed and emits a Burn event.
      * @param txId The transaction ID for the burn operation.
@@ -282,7 +282,7 @@ contract PacUSD is
     /**
      * @notice Mints reward tokens to a specified address.
      * @dev Only callable by an account with APPROVER_ROLE when not paused, with reentrancy protection.
-     *      Reverts if the recipient is the zero address or blacklisted. Emits a MintReward event.
+     *      Reverts if the recipient is the zero address or blocklisted. Emits a MintReward event.
      * @param amount The amount of tokens to mint as a reward.
      * @param to The address to receive the reward tokens.
      */
@@ -298,7 +298,7 @@ contract PacUSD is
     /**
      * @dev Emergency withdrawal of tokens held by the contract, designed to handle exceptional
      * situations such as tokens being locked or stuck. This method can only be called by
-     * addresses with the RESCUER_ROLE and prevents transfers to blacklisted addresses.
+     * addresses with the RESCUER_ROLE and prevents transfers to blocklisted addresses.
      *
      * @param tokenContract The address of the token contract to be rescued
      * @param to The recipient address for the tokens
@@ -314,7 +314,7 @@ contract PacUSD is
      * - Caller must have the RESCUER_ROLE.
      * - Recipient address cannot be the zero address.
      * - Amount must be greater than zero.
-     * - Recipient address must not be blacklisted.
+     * - Recipient address must not be blocklisted.
      *
      * Emits a {TokensRescued} event upon successful execution.
      */
@@ -333,8 +333,8 @@ contract PacUSD is
 
     /**
      * @notice Transfers tokens to a specified address.
-     * @dev Overrides ERC20 transfer to include pause and blacklist checks. Reverts if the contract is paused,
-     *      the sender or recipient is blacklisted. Emits a Transfer event.
+     * @dev Overrides ERC20 transfer to include pause and blocklist checks. Reverts if the contract is paused,
+     *      the sender or recipient is blocklisted. Emits a Transfer event.
      * @param to The address to transfer tokens to.
      * @param amount The amount of tokens to transfer.
      * @return bool True if the transfer succeeds.
@@ -355,8 +355,8 @@ contract PacUSD is
 
     /**
      * @notice Transfers tokens from one address to another using an allowance.
-     * @dev Overrides ERC20 transferFrom to include pause and blacklist checks. Reverts if the contract is paused,
-     *      the sender or recipient is blacklisted. Emits a Transfer event.
+     * @dev Overrides ERC20 transferFrom to include pause and blocklist checks. Reverts if the contract is paused,
+     *      the sender or recipient is blocklisted. Emits a Transfer event.
      * @param from The address to transfer tokens from.
      * @param to The address to transfer tokens to.
      * @param amount The amount of tokens to transfer.
@@ -375,36 +375,6 @@ contract PacUSD is
         returns (bool)
     {
         return super.transferFrom(from, to, amount);
-    }
-
-    /**
-     * @notice Grants a role to an account.
-     * @dev Overrides AccessControl grantRole to include a zero address check. Only callable by the role admin.
-     *      Emits a RoleGranted event.
-     * @param role The role to grant.
-     * @param account The address to receive the role.
-     */
-    function grantRole(
-        bytes32 role,
-        address account
-    ) public override onlyRole(getRoleAdmin(role)) {
-        if (account == address(0)) revert ZeroAddress();
-        _grantRole(role, account);
-    }
-
-    /**
-     * @notice Revokes a role from an account.
-     * @dev Overrides AccessControl revokeRole to include a zero address check. Only callable by the role admin.
-     *      Emits a RoleRevoked event.
-     * @param role The role to revoke.
-     * @param account The address to remove the role from.
-     */
-    function revokeRole(
-        bytes32 role,
-        address account
-    ) public override onlyRole(getRoleAdmin(role)) {
-        if (account == address(0)) revert ZeroAddress();
-        _revokeRole(role, account);
     }
 
     /**
@@ -491,4 +461,5 @@ contract PacUSD is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
+
 }

@@ -1,7 +1,48 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 interface IPacUSDStaking {
+    error ZeroAmount();
+    error InvalidArrayLength();
+
+    /// @notice revert when the attested is less than the reference
+    error InvalidTokenSupply(uint256 totalSupply, uint256 totalStaked);
+
+    /// @notice revert when the attested is less than the reference
+    error InvalidRewardRate(uint256 attested, uint256 ref);
+    
+    /// @notice revert when the amount is larger than the staking balance
+    error InsufficientStakingBalance(
+        address user,
+        uint256 amount,
+        uint256 balance
+    );
+    
+    /// @notice revert when the amount is larger than the reward balance
+    error InsufficientTokenBalance(
+        address user,
+        uint256 amount,
+        uint256 balance
+    );
+
+    /// @notice revert when the amount is larger than the reward balance
+    error InsufficientRewardBalance(
+        address user,
+        uint256 amount,
+        uint256 balance
+    );
+
+    /// @notice revert when the unstake time is ealier than the unlocked time
+    error InsufficientStakingPeriod(
+        address user,
+        uint256 unstakeAt,
+        uint256 unlockedAt
+    );
+
+    error RewardSchemeAlreadyAdded(address scheme);
+    error RewardSchemeNotFound(address scheme);
+    error NotUpdater();
+
     /**
      * @notice Stake a specified amount of tokens.
      * @param amount The amount of tokens to stake.
@@ -42,10 +83,10 @@ interface IPacUSDStaking {
 
     
     /**
-     * @notice update the accumulated rewward rate based on the latest price.
-     * @dev the price assumed to be monotonically increasing.
+     * @notice distribute new reward to stakers.
+     * @param newReward the amount of new reward to distribute.
      */
-    function update() external;
+    function distributeReward(uint256 newReward) external;
 
     /**
      * @notice Returns the version of the staking contract.

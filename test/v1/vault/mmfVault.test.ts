@@ -4,15 +4,10 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { keccak256, toUtf8Bytes, parseEther } from "ethers";
 import {
   PacUSD,
-  PacUSD__factory,
   MockERC20,
-  MockERC20__factory,
   MockPricer,
-  MockPricer__factory,
   MockStaking,
-  MockStaking__factory,
   MMFVault,
-  MMFVault__factory,
 } from "../../../typechain-types";
 
 describe("MMFVault", () => {
@@ -38,7 +33,7 @@ describe("MMFVault", () => {
     amount: bigint,
     toAccount: string
   ) => {
-    const chainId = await network.config.chainId;
+    const chainId = network.config.chainId;
     return ethers.keccak256(
       ethers.AbiCoder.defaultAbiCoder().encode(
         ["uint256", "address", "address", "uint256", "address", "uint256"],
@@ -53,34 +48,33 @@ describe("MMFVault", () => {
     // Deploy mock ERC20 token (MMFToken)
     const MockERC20Factory = (await ethers.getContractFactory(
       "MockERC20"
-    )) as MockERC20__factory;
+    ));
     MMFToken = await MockERC20Factory.deploy("MMF Token", "MMF");
     await MMFToken.mint(owner, parseEther("1000000"));
     // Deploy PacUSD
-    const PacUSDFactory = (await ethers.getContractFactory(
+    const PacUSDFactory = await ethers.getContractFactory(
       "PacUSD"
-    )) as PacUSD__factory;
-    // PacUSD = await PacUSDFactory.deploy();
+    );
     PacUSD = (await upgrades.deployProxy(PacUSDFactory, [], {
       initializer: false,
     })) as unknown as PacUSD;
 
     // Deploy mock IPricer
-    const PricerFactory = (await ethers.getContractFactory(
+    const PricerFactory = await ethers.getContractFactory(
       "MockPricer"
-    )) as MockPricer__factory;
+    );
     Pricer = await PricerFactory.deploy(INITIAL_PRICE);
 
     // Deploy mock IStaking
-    const StakingFactory = (await ethers.getContractFactory(
+    const StakingFactory = await ethers.getContractFactory(
       "MockStaking"
-    )) as MockStaking__factory;
+    );
     Staking = await StakingFactory.deploy();
 
     // Deploy MMFVault using UUPS proxy
-    const MMFVaultFactory = (await ethers.getContractFactory(
+    const MMFVaultFactory = await ethers.getContractFactory(
       "MMFVault"
-    )) as MMFVault__factory;
+    );
     MMFVault = (await upgrades.deployProxy(
       MMFVaultFactory,
       [
@@ -95,6 +89,7 @@ describe("MMFVault", () => {
     )) as unknown as MMFVault;
 
     await MMFVault.waitForDeployment();
+    await MMFVault.grantRole(await MMFVault.PAUSER_ROLE(), pauser.address);
 
     // Initialize PacUSD with MMFVault as minter
     await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target]);
@@ -131,9 +126,9 @@ describe("MMFVault", () => {
     });
 
     it("should revert if initialized with zero addresses", async () => {
-      const MMFVaultFactory = (await ethers.getContractFactory(
+      const MMFVaultFactory = await ethers.getContractFactory(
         "MMFVault"
-      )) as MMFVault__factory;
+      );
       await expect(
         upgrades.deployProxy(
           MMFVaultFactory,
@@ -226,9 +221,9 @@ describe("MMFVault", () => {
     });
 
     it("should revert if price less than 1 usdt", async () => {
-      const MMFVaultFactory = (await ethers.getContractFactory(
+      const MMFVaultFactory = await ethers.getContractFactory(
         "MMFVault"
-      )) as MMFVault__factory;
+      );
       await Pricer.setPrice(parseEther("0.1"));
       await expect(
         upgrades.deployProxy(
@@ -248,11 +243,11 @@ describe("MMFVault", () => {
   });
 
   describe("Access Control", () => {
-    it("should allow admin to pause and unpause", async () => {
-      await MMFVault.connect(owner).pause();
+    it("should allow pauser to pause and unpause", async () => {
+      await MMFVault.connect(pauser).pause();
       expect(await MMFVault.paused()).to.be.true;
 
-      await MMFVault.connect(owner).unpause();
+      await MMFVault.connect(pauser).unpause();
       expect(await MMFVault.paused()).to.be.false;
     });
 
@@ -300,7 +295,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       const txId = await generateTXId(user1.address, MMF_AMOUNT, user2.address);
       await PacUSD.connect(owner).setMintByTx(txId);
       await expect(
@@ -339,7 +334,7 @@ describe("MMFVault", () => {
           user2.address,
           TIMESTAMP
         )
-      ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
+      ).to.be.revertedWithCustomError(MMFVault, "RewardNotMinted");
     });
 
     it("should revert if amount is zero", async () => {
@@ -423,7 +418,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       const txId = await generateTXId(
         user2.address,
         PACUSD_AMOUNT,
@@ -472,7 +467,7 @@ describe("MMFVault", () => {
           user1.address,
           TIMESTAMP
         )
-      ).to.be.revertedWithCustomError(MMFVault, "InvalidPrice");
+      ).to.be.revertedWithCustomError(MMFVault, "RewardNotMinted");
     });
 
     it("should revert if amount is zero", async () => {
@@ -575,7 +570,7 @@ describe("MMFVault", () => {
     });
 
     it("should revert if paused", async () => {
-      await MMFVault.connect(owner).pause();
+      await MMFVault.connect(pauser).pause();
       await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
         MMFVault,
         "EnforcedPause"

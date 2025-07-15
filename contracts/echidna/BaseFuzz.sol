@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -24,29 +24,34 @@ abstract contract BaseFuzz {
 
     // Implementation contracts
     MMFVault public vaultImpl;
+    MMFVault public vault2Impl;
     PacUSD public pacUSDImpl;
     PacUSDStaking public stakingImpl;
 
     // Proxy contracts
     ERC1967Proxy public vaultProxy;
+    ERC1967Proxy public vault2Proxy;
     ERC1967Proxy public pacUSDProxy;
     ERC1967Proxy public stakingProxy;
 
     // Contract interfaces accessed via proxies
     MMFVault public vault;
+    MMFVault public vault2;
     PacUSD public pacUSD;
     PacUSDStaking public staking;
 
     // Mock contracts
     MockERC20 public mmfToken;
+    MockERC20 public mmfToken2;
     MockPricer public pricer;
+    MockPricer public pricer2;
 
     // System roles
-    address OWNER = address(0x0000000000000000000000000000000000010000);
-    address ADMIN = address(0x0000000000000000000000000000000000020000);
+    address OWNER = address(0x10000);
+    address ADMIN = address(0x20000);
     address UPGRADER = address(0x3000);
     address RESERVE = address(0x9000);
-    address BLACKLISTED_USER = address(0x5000);
+    address BLOCKLISTED_USER = address(0x5000);
 
     // Test user management
     mapping(address => bool) public knownUsers;
@@ -93,6 +98,9 @@ abstract contract BaseFuzz {
     function _deployMockContracts() internal {
         mmfToken = new MockERC20("MMF Token", "MMF");
         pricer = new MockPricer(1e18);
+
+        mmfToken2 = new MockERC20("MMF2 Token", "MMF2");
+        pricer2 = new MockPricer(1e18);
     }
 
     /**
@@ -101,6 +109,7 @@ abstract contract BaseFuzz {
      */
     function _deployImplementations() internal {
         vaultImpl = new MMFVault();
+        vault2Impl = new MMFVault();
         pacUSDImpl = new PacUSD();
         stakingImpl = new PacUSDStaking();
     }
@@ -121,10 +130,12 @@ abstract contract BaseFuzz {
     function _deployProxies() internal {
         pacUSDProxy = new ERC1967Proxy(address(pacUSDImpl), "");
         vaultProxy = new ERC1967Proxy(address(vaultImpl), "");
+        vault2Proxy = new ERC1967Proxy(address(vault2Impl), "");
         stakingProxy = new ERC1967Proxy(address(stakingImpl), "");
 
         pacUSD = PacUSD(address(pacUSDProxy));
         vault = MMFVault(address(vaultProxy));
+        vault2 = MMFVault(address(vault2Proxy));
         staking = PacUSDStaking(address(stakingProxy));
     }
 
@@ -133,8 +144,9 @@ abstract contract BaseFuzz {
      * @dev Initializes PacUSD, MMFVault, and PacUSDStaking with appropriate parameters
      */
     function _initializeContracts() internal {
-        address[] memory minters = new address[](1);
+        address[] memory minters = new address[](2);
         minters[0] = address(vaultProxy);
+        minters[1] = address(vault2Proxy);
         pacUSD.initialize(OWNER, UPGRADER, minters);
 
         vault.initialize(
@@ -146,59 +158,48 @@ abstract contract BaseFuzz {
             UPGRADER
         );
 
-        address[] memory vaults = new address[](1);
-        address[] memory pricers = new address[](1);
-        address[] memory mmfTokens = new address[](1);
+        vault2.initialize(
+            address(mmfToken2),
+            address(pacUSDProxy),
+            address(pricer2),
+            address(stakingProxy),
+            OWNER,
+            UPGRADER
+        );
+
+        address[] memory vaults = new address[](2);
 
         vaults[0] = address(vaultProxy);
-        pricers[0] = address(pricer);
-        mmfTokens[0] = address(mmfToken);
+        vaults[1] = address(vault2Proxy);
 
         staking.initialize(
             address(pacUSDProxy),
             UPGRADER,
             ADMIN,  // Admin role
             RESERVE,
-            vaults,
-            pricers,
-            mmfTokens
+            vaults
         );
     }
 
     /**
      * @notice Sets up the initial state of the system
-     * @dev Assigns roles, blacklists a user, and mints initial MMF tokens to the vault
+     * @dev Assigns roles, blocklists a user, and mints initial MMF tokens to the vault
      */
     function _setupInitialState() internal {
         vm.startPrank(OWNER);
         vault.grantRole(vault.PAUSER_ROLE(), OWNER);
+        vault2.grantRole(vault2.PAUSER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.PAUSER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.BLOCKLISTER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.APPROVER_ROLE(), OWNER);
         pacUSD.grantRole(pacUSD.RESCUER_ROLE(), OWNER);
-        pacUSD.addToBlocklist(BLACKLISTED_USER);
+        pacUSD.addToBlocklist(BLOCKLISTED_USER);
         vm.stopPrank();
 
         vm.startPrank(ADMIN);
         staking.grantRole(staking.PAUSER_ROLE(), ADMIN);
         staking.grantRole(staking.RESERVE_SET_ROLE(), ADMIN);
         staking.grantRole(staking.REWARD_SCHEME_ROLE(), ADMIN);
-        vm.stopPrank();
-
-        // Mint initial MMF tokens to the vault
-        mmfToken.mint(address(vault), 1000000e18);
-    }
-
-    /**
-     * @notice Mints MMF tokens for a user and approves the vault
-     * @dev Mints specified amount of MMF tokens and approves the vault to spend them
-     * @param user The user receiving the tokens
-     * @param amount The amount of MMF tokens to mint and approve
-     */
-    function mintAndApproveMMF(address user, uint256 amount) internal {
-        mmfToken.mint(user, amount);
-        vm.startPrank(user);
-        mmfToken.approve(address(vault), amount);
         vm.stopPrank();
     }
 }

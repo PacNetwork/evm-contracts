@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 contract MockStaking {
     bool public updateCalled;
 
-    function update() external {
+    function distributeReward(uint256) external {
         updateCalled = true;
     }
 }

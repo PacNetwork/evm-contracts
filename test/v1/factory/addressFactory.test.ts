@@ -159,14 +159,14 @@ describe("AddressFactory", () => {
     expect((await addressFactory.getVaultImplAddresses())[0]).to.equal(expectedVaultImpl);
 
     // Prepare deployment parameters
-    const vaultOwnerAddress = deployer;
-    const adminAddress = deployer;
+    const admin = deployer;
+    const upgrader = deployer;
 
     // 1. Deploy PacUSD contract
     // This contract is a stablecoin pegged to USD
     let tx = await pacUSDDeployFactory.deployContracts(
       vaultFactoryAddress, // Address of the Vault factory
-      vaultOwnerAddress, // Owner of the PacUSD contract
+      admin, // admin of the PacUSD contract
       pacUSDSalt // Salt for Create2 deployment
     );
     await tx.wait();
@@ -177,8 +177,8 @@ describe("AddressFactory", () => {
       [MMFToken.target], // Underlying token
       [Pricer.target], // Price oracle
       vaultSalts, // Salt for Create2 deployment
-      vaultOwnerAddress, // Owner of the vault
-      adminAddress, // Admin address
+      admin, // admin of the vault
+      upgrader, // upgrader address
     );
     await tx.wait();
 
@@ -187,9 +187,9 @@ describe("AddressFactory", () => {
     tx = await stakingDeployFactory.deployContracts(
       [Pricer.target], // Price oracle
       [MMFToken.target],
-      vaultOwnerAddress, // Owner of the staking contract
-      adminAddress, // Admin address
-      vaultOwnerAddress, // Reserve address
+      admin, // Owner of the staking contract
+      upgrader, // Admin address
+      admin, // Reserve address
       stakingSalt // Salt for Create2 deployment
     );
     await tx.wait();

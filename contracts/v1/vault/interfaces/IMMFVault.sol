@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 /**
@@ -12,7 +12,9 @@ interface IMMFVault {
     error ZeroAddress();
     error ZeroAmount();
     error ZeroBalance();
+    error InsufficientBalance();
     error InvalidPrice();
+    error RewardNotMinted();
 
     // Events
     event MintPacUSD(

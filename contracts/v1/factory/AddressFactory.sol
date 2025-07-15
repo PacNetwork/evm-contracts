@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -29,8 +29,6 @@ contract AddressFactory {
     // @dev Hash of the MMFVault contract bytecode
     bytes32 vaultHash;
     // @dev Salt used for deterministic deployment of MMFVault
-    bytes32 vaultSalt;
-    // @dev Hash of the PacUSD contract bytecode
     bytes32 pacUSDHash;
     // @dev Salt used for deterministic deployment of PacUSD
     bytes32 pacUSDSalt;

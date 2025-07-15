@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -32,7 +32,7 @@ contract MMFVault is
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    uint256 private constant PRICER_DECIMALS = 18;
+    uint256 private constant PRICER_PRECISION = 10 ** 18;
 
     // Token and pricer contracts
     IERC20 public mmfToken;
@@ -44,8 +44,8 @@ contract MMFVault is
 
     // Last recorded price for reward calculation
     uint256 public lastPrice;
-    uint256 mmfTokenDecimals;
-    uint256 pacUSDDecimals;
+    uint256 mmfTokenPrecision;
+    uint256 pacUSDPrecision;
     uint256 _totalMMFToken;
     uint256[50] private __gap;
 
@@ -59,7 +59,7 @@ contract MMFVault is
      * @param mmfTokenAddress Address of the MMF token contract
      * @param pacUSDTokenAddress Address of the PacUSD token contract
      * @param pricerAddress Address of the pricer contract
-     * @param ownerAddress Address to assign owner
+     * @param admin Address to assign admin
      * @param upgrader The address to upgrade contract
      */
     function initialize(
@@ -67,7 +67,7 @@ contract MMFVault is
         address pacUSDTokenAddress,
         address pricerAddress,
         address stakingAddress,
-        address ownerAddress,
+        address admin,
         address upgrader
     ) public initializer {
         if (
@@ -75,7 +75,7 @@ contract MMFVault is
             pacUSDTokenAddress == address(0) ||
             pricerAddress == address(0) ||
             stakingAddress == address(0) ||
-            ownerAddress == address(0) ||
+            admin == address(0) ||
             upgrader == address(0)
         ) revert ZeroAddress();
         __Ownable_init(upgrader);
@@ -85,17 +85,17 @@ contract MMFVault is
         __Pausable_init();
 
         mmfToken = IERC20(mmfTokenAddress);
-        mmfTokenDecimals = ERC20(mmfTokenAddress).decimals();
+        mmfTokenPrecision = 10 ** ERC20(mmfTokenAddress).decimals();
         pacUSDToken = IERC20(pacUSDTokenAddress);
         pacUSD = IPacUSD(pacUSDTokenAddress);
-        pacUSDDecimals = ERC20(pacUSDTokenAddress).decimals();
+        pacUSDPrecision = 10 ** ERC20(pacUSDTokenAddress).decimals();
         pricer = IPricer(pricerAddress);
         staking = IPacUSDStaking(stakingAddress);
         lastPrice = pricer.getLatestPrice();
-        if (lastPrice < 1 * 10 ** PRICER_DECIMALS) {
+        if (lastPrice < PRICER_PRECISION) {
             revert InvalidPrice();
         }
-        _grantRole(DEFAULT_ADMIN_ROLE, ownerAddress);
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     /**
@@ -110,7 +110,7 @@ contract MMFVault is
      * @notice Pauses the contract
      * @dev Only callable by pauser role
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external onlyRole(PAUSER_ROLE) {
         _pause();
     }
 
@@ -118,7 +118,7 @@ contract MMFVault is
      * @notice Unpauses the contract
      * @dev Only callable by pauser role
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
     }
 
@@ -152,12 +152,13 @@ contract MMFVault is
         ) revert InvalidTxId();
         _totalMMFToken += amount;
         uint256 price = pricer.getLatestPrice();
-        if (price < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
-        if (price != lastPrice) revert InvalidPrice();
+        if (price < lastPrice) revert InvalidPrice();
+        if (price > lastPrice) revert RewardNotMinted();
 
         // Calculate PacUSD amount (1 MMF = price PacUSD)
-        uint256 pacUSDAmount = (amount * price * 10 ** pacUSDDecimals) /
-            (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
+        uint256 pacUSDAmount = (amount * price * pacUSDPrecision) /
+            mmfTokenPrecision /
+            PRICER_PRECISION;
 
         mmfToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.mintByTx(txId, pacUSDAmount, to);
@@ -202,13 +203,16 @@ contract MMFVault is
         ) revert InvalidTxId();
 
         uint256 price = pricer.getLatestPrice();
-        if (price < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
-        if (price != lastPrice) revert InvalidPrice();
+        if (price < lastPrice) revert InvalidPrice();
+        if (price > lastPrice) revert RewardNotMinted();
 
         // Calculate MMF amount (1 MMF = price PacUSD)
-        uint256 mmfAmount = (amount *
-            10 ** mmfTokenDecimals *
-            10 ** PRICER_DECIMALS) / (price * 10 ** pacUSDDecimals);
+        uint256 mmfAmount = (amount * mmfTokenPrecision * PRICER_PRECISION) /
+            price /
+            pacUSDPrecision;
+        if (mmfAmount > _totalMMFToken) {
+            revert InsufficientBalance();
+        }
         _totalMMFToken -= mmfAmount;
         pacUSDToken.safeTransferFrom(_msgSender(), address(this), amount);
         pacUSD.burnByTx(txId, amount, address(this));
@@ -223,29 +227,29 @@ contract MMFVault is
      */
     function mintReward() public whenNotPaused nonReentrant {
         uint256 currentPrice = pricer.getLatestPrice();
-        if (currentPrice < 1 * 10 ** mmfTokenDecimals) revert InvalidPrice();
+        if (currentPrice < lastPrice) revert InvalidPrice();
+        if (currentPrice == lastPrice) return; // No price change, no reward
         if (currentPrice > lastPrice) {
-            uint256 balance = mmfToken.balanceOf(address(this));
-            if (balance > uint256(0)) {
+            if (_totalMMFToken > uint256(0)) {
                 uint256 priceDifference = currentPrice - lastPrice;
                 uint256 rewardAmount = (priceDifference *
-                    balance *
-                    10 ** pacUSDDecimals) /
-                    (10 ** mmfTokenDecimals * 10 ** PRICER_DECIMALS);
+                    _totalMMFToken *
+                    pacUSDPrecision) /
+                    mmfTokenPrecision /
+                    PRICER_PRECISION;
                 uint256 tempLastPrice = lastPrice;
                 lastPrice = currentPrice;
-                staking.update();
+                staking.distributeReward(rewardAmount);
                 pacUSD.mintReward(rewardAmount, address(staking));
                 emit RewardMinted(
                     address(staking),
                     rewardAmount,
                     tempLastPrice,
                     currentPrice,
-                    balance
+                    _totalMMFToken
                 );
             } else {
                 lastPrice = currentPrice; //need update price
-                staking.update(); //need invoke update
             }
         }
     }
@@ -265,4 +269,4 @@ contract MMFVault is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
-}
+}   

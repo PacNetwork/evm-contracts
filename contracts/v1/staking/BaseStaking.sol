@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -8,11 +8,13 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {IBaseStaking} from "./interfaces/IBaseStaking.sol";
 
 /**
  * @notice an abstract base contract for staking. It handles the initialization of the inherited Openzeppelin contracts
  */
 abstract contract BaseStaking is
+    IBaseStaking,
     Initializable,
     ContextUpgradeable,
     AccessControlUpgradeable,
@@ -21,10 +23,6 @@ abstract contract BaseStaking is
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    error ZeroAddress();
-
-    uint256[50] private __gap; // Reserve space for future variables
-
     function __BaseStaking_init(
         address upgrader,
         address admin
@@ -43,5 +41,7 @@ abstract contract BaseStaking is
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function _authorizeUpgrade(address) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImpl) internal override onlyOwner {
+        if (newImpl == address(0)) revert ZeroAddress();
+    }
 }

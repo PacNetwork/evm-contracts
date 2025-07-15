@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
 import {PacUSDStaking} from "../v1/staking/PacUSDStaking.sol";
@@ -9,18 +9,14 @@ contract PacUSDStakingTest is PacUSDStaking {
         address upgrader,
         address admin,
         address reserve,
-        address[] memory vaults,
-        address[] memory pricers,
-        address[] memory mmfTokens
+        address[] memory vaults
     ) public override initializer {
         super.initialize(
             token,
             upgrader,
             admin,
             reserve,
-            vaults,
-            pricers,
-            mmfTokens
+            vaults
         );
     }
 
@@ -35,14 +31,6 @@ contract PacUSDStakingTest is PacUSDStaking {
     function addStakedAmount(address user, uint256 inc) external {
         stakingBalances[user] += inc;
         totalStaked_ += inc;
-    }
-
-    function setLastPrice(address vault, uint256 price) external {
-        lastPrices[vault] = price;
-    }
-
-    function getLastPrice(address vault) external view returns (uint256) {
-        return lastPrices[vault];
     }
 
     function setAccumulatedRewardRate(uint256 rate) external {

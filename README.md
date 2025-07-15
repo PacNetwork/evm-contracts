@@ -4,13 +4,14 @@ A minimal viable product for a contract system, integrating token swapping, stak
 
 ## Project Overview
 
-This project extends the Camel Contract system with a factory-based deployment mechanism, enabling predictable contract addresses and streamlined upgrades. The solution now includes a `DeployFactory` contract that uses CREATE2 to deploy proxy instances of `PacUSD` and `MMFVault`, ensuring address determinism and upgradeability via the UUPS pattern.
+This project extends the Camel Contract system with a factory-based deployment mechanism, enabling predictable contract addresses and streamlined upgrades. The solution now includes a `DeployFactory` contract that uses CREATE2 to deploy proxy instances of `PacUSD`, `MMFVault` and `PacUSDStaking`, ensuring address determinism and upgradeability via the UUPS pattern.
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/en/) (v18 or higher)
 - [npm](https://www.npmjs.com/) (included with Node.js)
 - [Hardhat](https://hardhat.org/) (development environment)
+- [Echidna](https://secure-contracts.com/program-analysis/echidna/index.html) (for fuzzing test the contracts)
 - [Git](https://git-scm.com/) (for cloning the project)
 - Environment variables management via `.env` file
 
@@ -52,6 +53,24 @@ To generate coverage reports:
 npm run coverage
 ```
 
+### Fuzzing Test with Echidna
+
+To perform fuzzing test using Echidna, ensure Echidna is installed and configured. Run the following commands to test specific contracts:
+
+- Test the PauseStateTest contract in assertion mode:
+
+  ```bash
+  echidna . --contract PauseStateTest --config echidna.yaml --test-mode assertion
+  ```
+
+- Test the SceneFuzzTest contract with default settings:
+
+  ```bash
+  echidna . --contract SceneFuzzTest --config echidna.yaml
+  ```
+
+The echidna.yaml configuration file specifies test parameters such as iteration limits and target contracts. Ensure it is properly configured in the project root.
+
 ## Deploying Contracts
 
 ### Environment Configuration
@@ -59,17 +78,37 @@ npm run coverage
 First, configure your environment variables in a `.env` file (refer to `.env.example` for structure):
 ```env
 MMFTOKEN_ADDRESS=MMF-token-contract-address
-PRICER_ADDRESS=pricer-contract-address
-STAKING_ADDRESS=staking-contract-address
-OWNER_ADDRESS=initial-owner-address
-UPGRADER_ADDRESS=upgrader-address
-APPROVER_ADDRESS=approver-role-address
-PAUSER_ADDRESS=pauser-role-address
-RESCUER_ADDRESS=rescuer-role-address
-BLACKLISTER_ADDRESS=blacklister-role-address
+PRICER_ADDRESS=MMF-token-pricer-contract-address
 
-MMFTOKEN_ADDRESS= mmftoken-address
-PRICER_ADDRESS=pricer-address
+#all contract
+DEPLOY_PRIVATE_KEY=deployer-private-key
+ADMIN_ADDRESS=admin-role-address
+UPGRADER_ADDRESS=contract-upgrader-address
+
+#staking
+STAKING_RESERVE_ADDRESS=staking-reserve-address
+STAKING_PAUSER_ROLE=staking-pauser-role-address
+STAKING_RESERVE_SET_ROLE=staking-reserve-set-role-address
+STAKING_REWARD_SCHEME_ROLE=staking-reward-scheme-role-address
+
+#vault
+VAULT_PAUSER_ADDRESS=MMF-vault-pauser-role-address
+
+#pacusd
+PACUSD_APPROVER_ADDRESS=PacUSD-approver-role-address
+PACUSD_PAUSER_ADDRESS=PacUSD-pauser-role-address
+PACUSD_RESCUER_ADDRESS=PacUSD-rescuer-role-address
+PACUSD_BLOCKLISTER_ADDRESS=PacUSD-blocklister-role-address
+
+
+#FOR GAS REPORT 
+GAS_REPORT=0   #1 enable
+CMC_APIKEY=
+ETHSCAN_APIKEY=
+
+#for upgrade
+UPGRADE_PRIVATE_KEY=upgrader-private-key
+SAFE_API_KEY=safe-wallet-api-key
 ```
 
 ### Local Development (Hardhat Network)
@@ -77,7 +116,7 @@ PRICER_ADDRESS=pricer-address
 1. Start the local node:
    ```bash
    npm run node
-   ```   
+   ```
 2. Deploy contracts using the factory script:
    ```bash
    npm run deploy
@@ -96,6 +135,7 @@ npm run deploy:{network}
 ```
 camel-contract-v2/
 ├── contracts/                # Smart contracts
+│   ├── echidna/              # Contracts designed for Echidna fuzzing tests, including test harnesses and invariants
 │   ├── helper/               # Helper contracts
 │   ├── interface/            # Contract interfaces
 │   ├── mock/                 # Mock contracts
@@ -116,11 +156,12 @@ camel-contract-v2/
 │       ├── pacusd/           # PacUsd test cases
 │       ├── staking/          # PacUSDStaking test cases
 │       └── vault/            # MMFVault test cases
+├── .env.example              # Environment variables for example
+├── echidna.yaml              # Configuration file for fuzz testing with Echidna
 ├── hardhat.config.js         # Hardhat configuration
-├── .env                      # Environment variables (based on .env.example)
 ├── package.json              # Project dependencies
-├── LICENSE                   # BUSL-1.1 license
-└── README.md                 # Project documentation
+├── README.md                 # Project readme documentation
+└── tsconfig.json             # Typescipt config
 ```
 
 ## Dependencies
@@ -134,7 +175,7 @@ camel-contract-v2/
 
 ## License
 
-This project is licensed under the BUSL-1.1 license - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the BUSL-1.1 license.
 
 ## Contact
 
