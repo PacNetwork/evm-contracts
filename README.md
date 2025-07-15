@@ -1,10 +1,10 @@
-# Camel Contract V2
+# MARS Contracts V2
 
 A minimal viable product for a contract system, integrating token swapping, staking, and stablecoin functionalities with enhanced deployment and upgrade capabilities.
 
 ## Project Overview
 
-This project extends the Camel Contract system with a factory-based deployment mechanism, enabling predictable contract addresses and streamlined upgrades. The solution now includes a `DeployFactory` contract that uses CREATE2 to deploy proxy instances of `PacUSD`, `MMFVault` and `PacUSDStaking`, ensuring address determinism and upgradeability via the UUPS pattern.
+This project extends the MARS Contract system with a factory-based deployment mechanism, enabling predictable contract addresses and streamlined upgrades. The solution now includes a `DeployFactory` contract that uses CREATE2 to deploy proxy instances of `PacUSD`, `MMFVault` and `PacUSDStaking`, ensuring address determinism and upgradeability via the UUPS pattern.
 
 ## Prerequisites
 
@@ -20,7 +20,7 @@ This project extends the Camel Contract system with a factory-based deployment m
 1. Clone the repository:
    ```bash
    git clone ${url}
-   cd camel-contract-v2
+   cd MARS-m2-ethereum
    ```
 
 2. Install dependencies:
@@ -133,7 +133,7 @@ npm run deploy:{network}
 ## Project Structure
 
 ```
-camel-contract-v2/
+MARS-m2-ethereum/
 ├── contracts/                # Smart contracts
 │   ├── echidna/              # Contracts designed for Echidna fuzzing tests, including test harnesses and invariants
 │   ├── helper/               # Helper contracts
