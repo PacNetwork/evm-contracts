@@ -1,11 +1,11 @@
 import { ethers } from "hardhat";
 import { parseEther } from "ethers";
 import dotenv from "dotenv";
-import { deploy } from "./deploy_contracts";
+import { deployNewMMFVaultsFromConfig } from "./deploy_vaultcontract";
 dotenv.config();
 
 async function deploy_mock() {
-  console.log("=========Deploy Mock================");
+  console.log("=========Deploy Vault Mock================");
   // Get signers
   const [deployer] = await ethers.getSigners();
   console.log("Deploying account:", deployer.address);
@@ -27,14 +27,14 @@ async function deploy_mock() {
 async function main() {
   let pricerAddresses: string[] = [];
   let mmfTokenAddresses: string[] = [];
-  for (let index = 0; index < 3; index++) {
+  for (let index = 0; index < 1; index++) {
     const [mmfTokenAddress, pricerAddress] = await deploy_mock();
     pricerAddresses.push(pricerAddress);
     mmfTokenAddresses.push(mmfTokenAddress);
   }
-  process.env["PRICER_ADDRESS"] = pricerAddresses.join(",");
-  process.env["MMFTOKEN_ADDRESS"] = mmfTokenAddresses.join(",");
-  await deploy(false);
+  process.env["NEW_PRICER_ADDRESSES"] =  pricerAddresses.join(",");
+  process.env["NEW_MMF_TOKEN_ADDRESSES"] = mmfTokenAddresses.join(",");
+  await deployNewMMFVaultsFromConfig();
 }
 // Execute the main function and handle exceptions
 main()

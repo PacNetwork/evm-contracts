@@ -32,7 +32,9 @@ contract MMFVault is
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
     uint256 private constant PRICER_PRECISION = 10 ** 18;
+    uint256 private constant FEE_PRECISION = 10 ** 18; // 1e18 = 100% fee, 1e16 = 1% fee
 
     // Token and pricer contracts
     IERC20 public mmfToken;
@@ -41,6 +43,10 @@ contract MMFVault is
     IPacUSD public pacUSD;
     IPricer public pricer;
     IPacUSDStaking public staking;
+
+    address public feeReceiver; // Address to receive collected fees
+    uint256 public mintFeeRate; // Fee rate for mintPacUSD (MMF → PacUSD), in FEE_PRECISION
+    uint256 public redeemFeeRate; // Fee rate for redeemMMF (PacUSD → MMF), in FEE_PRECISION
 
     // Last recorded price for reward calculation
     uint256 public lastPrice;
@@ -123,6 +129,47 @@ contract MMFVault is
     }
 
     /**
+     * @notice Updates the fee receiver address
+     * @dev Only callable by  DEFAULT_ADMIN_ROLE
+     * @param newFeeReceiver New address to receive fees (cannot be zero)
+     */
+    function updateFeeReceiver(
+        address newFeeReceiver
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (newFeeReceiver == address(0)) revert ZeroAddress();
+        emit FeeReceiverUpdated(feeReceiver, newFeeReceiver);
+        feeReceiver = newFeeReceiver;
+    }
+
+    /**
+     * @notice Updates the fee rate for mintPacUSD (MMF → PacUSD)
+     * @dev Only callable by  DEFAULT_ADMIN_ROLE
+     * @param newMintFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     */
+    function updateMintFeeRate(
+        uint256 newMintFeeRate
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeReceiver == address(0)) revert FeeReceiverRequired();
+        if (newMintFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        emit MintFeeRateUpdated(mintFeeRate, newMintFeeRate);
+        mintFeeRate = newMintFeeRate;
+    }
+
+    /**
+     * @notice Updates the fee rate for redeemMMF (PacUSD → MMF)
+     * @dev Only callable by  DEFAULT_ADMIN_ROLE
+     * @param newRedeemFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     */
+    function updateRedeemFeeRate(
+        uint256 newRedeemFeeRate
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (feeReceiver == address(0)) revert FeeReceiverRequired();
+        if (newRedeemFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        emit RedeemFeeRateUpdated(redeemFeeRate, newRedeemFeeRate);
+        redeemFeeRate = newRedeemFeeRate;
+    }
+
+    /**
      * @notice Swaps MMF tokens for PacUSD
      * @param txId Transaction ID (block.chainid, hash of address(this), sender, amount, toAccount, timestamp)
      * @param amount Amount of MMF tokens to swap
@@ -160,8 +207,17 @@ contract MMFVault is
             mmfTokenPrecision /
             PRICER_PRECISION;
 
+        uint256 mintFee = (pacUSDAmount * mintFeeRate) / FEE_PRECISION;
+        if (mintFee > pacUSDAmount) revert FeeCalculationFailed();
+        uint256 finalPacUSDAmount = pacUSDAmount - mintFee;
+
         mmfToken.safeTransferFrom(_msgSender(), address(this), amount);
-        pacUSD.mintByTx(txId, pacUSDAmount, to);
+        pacUSD.mintByTx(txId, finalPacUSDAmount, to);
+
+        if (mintFee > 0) {
+            pacUSD.mintFee(mintFee, feeReceiver);
+            emit MintFeeCollected(_msgSender(), txId, mintFee, feeReceiver);
+        }
 
         emit MintPacUSD(
             _msgSender(),
@@ -206,16 +262,31 @@ contract MMFVault is
         if (price < lastPrice) revert InvalidPrice();
         if (price > lastPrice) revert RewardNotMinted();
 
+        uint256 redeemFee = (amount * redeemFeeRate) / FEE_PRECISION;
+        if (redeemFee > amount) revert FeeCalculationFailed();
+
         // Calculate MMF amount (1 MMF = price PacUSD)
-        uint256 mmfAmount = (amount * mmfTokenPrecision * PRICER_PRECISION) /
+        uint256 finalAmount = amount - redeemFee;
+    
+        uint256 mmfAmount = (finalAmount *
+            mmfTokenPrecision *
+            PRICER_PRECISION) /
             price /
             pacUSDPrecision;
         if (mmfAmount > _totalMMFToken) {
             revert InsufficientBalance();
         }
         _totalMMFToken -= mmfAmount;
+
         pacUSDToken.safeTransferFrom(_msgSender(), address(this), amount);
-        pacUSD.burnByTx(txId, amount, address(this));
+
+        pacUSD.burnByTx(txId, finalAmount, address(this));
+
+        if (redeemFee > 0) {
+            pacUSDToken.safeTransfer(feeReceiver, redeemFee);
+            emit RedeemFeeCollected(_msgSender(), txId, redeemFee, feeReceiver);
+        }
+
         mmfToken.safeTransfer(to, mmfAmount);
 
         emit RedeemMMF(_msgSender(), txId, to, timestamp, amount, mmfAmount);
@@ -269,4 +340,4 @@ contract MMFVault is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
-}   
+}

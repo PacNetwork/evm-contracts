@@ -15,7 +15,9 @@ interface IMMFVault {
     error InsufficientBalance();
     error InvalidPrice();
     error RewardNotMinted();
-
+    error FeeRateExceedsMax(); 
+    error FeeCalculationFailed();
+    error FeeReceiverRequired();
     // Events
     event MintPacUSD(
         address indexed from,
@@ -39,6 +41,29 @@ interface IMMFVault {
         uint256 lastPrice,
         uint256 currentPrice,
         uint256 balance
+    );
+
+    event FeeReceiverUpdated(
+        address indexed oldReceiver,
+        address indexed newReceiver
+    );
+
+    event MintFeeRateUpdated(uint256 oldRate, uint256 newRate);
+
+    event RedeemFeeRateUpdated(uint256 oldRate, uint256 newRate);
+
+    event MintFeeCollected(
+        address indexed sender,
+        bytes32 indexed txId,
+        uint256 feeAmount,
+        address indexed receiver
+    );
+
+    event RedeemFeeCollected(
+        address indexed sender,
+        bytes32 indexed txId,
+        uint256 feeAmount,
+        address indexed receiver
     );
 
     /**

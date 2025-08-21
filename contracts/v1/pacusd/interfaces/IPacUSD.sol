@@ -28,6 +28,7 @@ interface IPacUSD {
     event BurnTxSet(bytes32 indexed txId);
     event BurnTxCancelled(bytes32 indexed txId);
     event MintReward(address indexed to, uint256 amount);
+    event MintFee(address indexed to, uint256 amount);
 
     /**
      * @notice Pauses the contract, preventing transfers, minting, burning, and rescues
@@ -120,6 +121,19 @@ interface IPacUSD {
      * @param to The address to receive reward tokens
      */
     function mintReward(uint256 amount, address to) external;
+
+    /**
+     * @notice Mints PacUSD tokens specifically for fee distribution purposes
+     * @dev This function is restricted to accounts with the `onlyMinter` role, ensuring only authorized contracts (e.g., MMFVault)
+     *      can mint tokens for fee-related use cases. It includes core security checks (zero-address prevention, pause state,
+     *      blocklist validation) and follows non-reentrant design to avoid reentrancy attacks.
+     * @param amount The quantity of PacUSD tokens to mint (must be non-zero, though zero check may be handled by underlying `_mint` logic)
+     * @param to The recipient address that will receive the minted PacUSD tokens (fee receiver, typically a designated account)
+     */
+    function mintFee(
+        uint256 amount,
+        address to
+    ) external;
 
     /**
      * @dev Emergency withdrawal of tokens held by the contract, designed to handle exceptional
