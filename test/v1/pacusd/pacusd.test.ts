@@ -403,6 +403,7 @@ describe("PacUSD", function () {
       ).to.be.revertedWithCustomError(pacUSD, "TxIdInvalid");
     });
 
+
     it("should allow approver to mint rewards", async function () {
       await expect(pacUSD.connect(minter).mintReward(AMOUNT, user1.address))
         .to.emit(pacUSD, "MintReward")
@@ -684,6 +685,78 @@ describe("PacUSD", function () {
       );
     });
   });
+
+  describe("MintFee", function () {
+  /**
+   * Core Functionality Test: Verify that a valid minter can successfully execute fee minting
+   * Expected Results:
+   * 1. Triggers the MintFee event with the correct recipient address and amount
+   * 2. The recipient's balance increases by the corresponding amount
+   * 3. The contract's total supply increases synchronously by the same amount
+   */
+  it("should allow minter to mint fee to valid recipient", async function () {
+    // Execute mintFee: Minter mints 100 PacUSD as fee to user1
+    await expect(pacUSD.connect(minter).mintFee(AMOUNT, user1.address))
+      .to.emit(pacUSD, "MintFee") // Verify event emission
+      .withArgs(user1.address, AMOUNT); // Verify event parameter correctness
+
+    // Verify recipient's balance
+    expect(await pacUSD.balanceOf(user1.address)).to.equal(AMOUNT);
+    // Verify total supply
+    expect(await pacUSD.totalSupply()).to.equal(AMOUNT);
+  });
+
+  /**
+   * Permission Control Test: Revert if a non-minter attempts to call mintFee
+   * Expected Result: Triggers the NotMinter custom error
+   */
+  it("should revert if non-minter tries to mint fee", async function () {
+    // user1 does not have minter permission; calling mintFee should be rejected
+    await expect(
+      pacUSD.connect(user1).mintFee(AMOUNT, user2.address)
+    ).to.be.revertedWithCustomError(pacUSD, "NotMinter");
+  });
+
+  /**
+   * Boundary Condition Test: Revert if minting fee to the zero address
+   * Expected Result: Triggers the ZeroAddress custom error
+   */
+  it("should revert if minting fee to zero address", async function () {
+    await expect(
+      pacUSD.connect(minter).mintFee(AMOUNT, ZERO_ADDRESS)
+    ).to.be.revertedWithCustomError(pacUSD, "ZeroAddress");
+  });
+
+  /**
+   * Security Control Test: Revert if minting fee to a blocklisted address
+   * Expected Result: Triggers the BlocklistedAccount custom error
+   */
+  it("should revert if minting fee to blocklisted address", async function () {
+    // First add user1 to the blocklist
+    await pacUSD.connect(owner).addToBlocklist(user1.address);
+    
+    // Minting fee to blocklisted address user1 should be rejected
+    await expect(
+      pacUSD.connect(minter).mintFee(AMOUNT, user1.address)
+    ).to.be.revertedWithCustomError(pacUSD, "BlocklistedAccount");
+  });
+
+  /**
+   * Contract State Test: Revert if calling mintFee when the contract is paused
+   * Expected Result: Triggers the EnforcedPause custom error
+   */
+  it("should revert minting fee when contract is paused", async function () {
+    // Pause the contract (owner has PAUSER_ROLE, authorized in global setup)
+    await pacUSD.connect(owner).pause();
+    
+    // Calling mintFee while the contract is paused should be rejected
+    await expect(
+      pacUSD.connect(minter).mintFee(AMOUNT, user1.address)
+    ).to.be.revertedWithCustomError(pacUSD, "EnforcedPause");
+  });
+ 
+});
+
 
   describe("Rescue Tokens (Enhanced with MockERC20)", function () {
     let mockExternalToken: MockERC20; // Use MockERC20 for external token testing
