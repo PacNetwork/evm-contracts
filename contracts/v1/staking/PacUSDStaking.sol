@@ -41,13 +41,19 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     mapping(address => uint256) internal rewardBalances;
     mapping(address => uint256) internal entryRewardRates;
 
+    uint256 internal rewardDustAccumulator;
+
     uint256[50] private __gap; // Reserve space for future variables
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
     event Restaked(address indexed user, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
-    event RewardDistributed(address indexed updater, uint256 newReward, uint256 rewardRate);
+    event RewardDistributed(
+        address indexed updater,
+        uint256 newReward,
+        uint256 rewardRate
+    );
     event ReserveSet(address indexed reserve);
     event RewardSchemeAdded(address indexed scheme);
     event RewardSchemeRemoved(address indexed scheme);
@@ -327,12 +333,32 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         if (totalSupply < totalStaked_)
             revert InvalidTokenSupply(totalSupply, totalStaked_);
 
-        uint256 incRate = _calculateRateInc(newReward, totalSupply);
-        accumulatedRewardRate += incRate;
+        // add the reward not yet distributed
+        uint256 rewardToBeDistributed = newReward + rewardDustAccumulator;
+        uint256 incRate = _calculateRateInc(rewardToBeDistributed, totalSupply);
 
-        // update reward balance for RESERVE
-        uint256 incReserve = _calculateReserveInc(incRate, totalSupply);
-        rewardBalances[RESERVE] += incReserve;
+        if (incRate > 0) {
+            accumulatedRewardRate += incRate;
+
+            // update reward balance for RESERVE
+            uint256 incReserve = _calculateReserveInc(incRate, totalSupply);
+            rewardBalances[RESERVE] += incReserve;
+
+            // Calculate actual reward amount represented by the rate
+            uint256 actualRewardUsed = (incRate * totalSupply) / RATE_PRECISION;
+
+            // Update dust accumulator with remaining amount
+            rewardDustAccumulator = rewardToBeDistributed - actualRewardUsed;
+
+            emit RewardDistributed(
+                _msgSender(),
+                newReward,
+                accumulatedRewardRate
+            );
+        } else {
+            // no distribution, all goes to dust
+            rewardDustAccumulator = rewardToBeDistributed;
+        }
 
         // update the external reward schemes
         uint256 length = rewardSchemes.length;
@@ -340,8 +366,6 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
             IRewardScheme scheme = IRewardScheme(rewardSchemes[i]);
             if (scheme.isActive()) scheme.update();
         }
-
-        emit RewardDistributed(_msgSender(), newReward, accumulatedRewardRate);
 
         return;
     }
@@ -406,8 +430,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         uint256 newReward,
         uint256 totalSupply
     ) internal view virtual returns (uint256) {
-        return
-            (newReward * RATE_PRECISION) / totalSupply;
+        return (newReward * RATE_PRECISION) / totalSupply;
     }
 
     function _calculateReserveInc(
