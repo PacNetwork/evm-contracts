@@ -268,7 +268,7 @@ contract MMFVault is
 
         // Calculate MMF amount (1 MMF = price PacUSD)
         uint256 finalAmount = amount - redeemFee;
-    
+
         uint256 mmfAmount = (finalAmount *
             mmfTokenPrecision *
             PRICER_PRECISION) /
@@ -294,11 +294,27 @@ contract MMFVault is
     }
 
     /**
-     * @notice Distributes rewards based on price changes
-     * @dev Callable by anyone, mints PacUSD rewards and updates staking
+     * @dev Mints rewards for stakers based on price increases
+     *
+     * This function is called by an administrator to calculate and distribute rewards
+     * to the staking contract when the latest price is higher than the last recorded price.
+     * The reward amount is calculated based on the price difference, total staked MMF tokens,
+     * and precision conversion factors.
+     *
+     * Restrictions:
+     * - Contract must not be paused (whenNotPaused)
+     * - Protected against reentrancy attacks (nonReentrant)
+     * - Only callable by addresses with DEFAULT_ADMIN_ROLE (onlyRole)
+     *
+     * @param rewardPrice The price provided by the caller, which must match the latest price
+     *                    to ensure accuracy
+     *
      */
-    function mintReward() public whenNotPaused nonReentrant {
+    function mintReward(
+        uint256 rewardPrice
+    ) public whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 currentPrice = pricer.getLatestPrice();
+        if (rewardPrice != currentPrice) revert MismatchPrice();
         if (currentPrice < lastPrice) revert InvalidPrice();
         if (currentPrice == lastPrice) return; // No price change, no reward
         if (currentPrice > lastPrice) {
