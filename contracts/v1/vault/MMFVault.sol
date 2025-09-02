@@ -35,6 +35,7 @@ contract MMFVault is
 
     uint256 private constant PRICER_PRECISION = 10 ** 18;
     uint256 private constant FEE_PRECISION = 10 ** 18; // 1e18 = 100% fee, 1e16 = 1% fee
+    uint256 private constant MAX_FEE_RATE = 25 * 10 ** 16; //25% fee
 
     // Token and pricer contracts
     IERC20 public mmfToken;
@@ -144,13 +145,13 @@ contract MMFVault is
     /**
      * @notice Updates the fee rate for mintPacUSD (MMF → PacUSD)
      * @dev Only callable by  DEFAULT_ADMIN_ROLE
-     * @param newMintFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     * @param newMintFeeRate New fee rate (1e18 = 100%, use FEE_PRECISION for scaling)
      */
     function updateMintFeeRate(
         uint256 newMintFeeRate
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (feeReceiver == address(0)) revert FeeReceiverRequired();
-        if (newMintFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        if (newMintFeeRate > MAX_FEE_RATE) revert FeeRateExceedsMax();
         emit MintFeeRateUpdated(mintFeeRate, newMintFeeRate);
         mintFeeRate = newMintFeeRate;
     }
@@ -158,13 +159,13 @@ contract MMFVault is
     /**
      * @notice Updates the fee rate for redeemMMF (PacUSD → MMF)
      * @dev Only callable by  DEFAULT_ADMIN_ROLE
-     * @param newRedeemFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     * @param newRedeemFeeRate New fee rate (1e18 = 100%, use FEE_PRECISION for scaling)
      */
     function updateRedeemFeeRate(
         uint256 newRedeemFeeRate
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (feeReceiver == address(0)) revert FeeReceiverRequired();
-        if (newRedeemFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        if (newRedeemFeeRate > MAX_FEE_RATE) revert FeeRateExceedsMax();
         emit RedeemFeeRateUpdated(redeemFeeRate, newRedeemFeeRate);
         redeemFeeRate = newRedeemFeeRate;
     }
