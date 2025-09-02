@@ -85,7 +85,6 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
 
         minStakingPeriod = 1 days;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
         for (uint256 i; i < len; ++i) {
             UPDATERS[updaters[i]] = true;
         }
