@@ -39,6 +39,7 @@ interface IPacUSDStaking {
         uint256 unlockedAt
     );
 
+    error RewardSchemeArrayTooLong();
     error RewardSchemeAlreadyAdded(address scheme);
     error RewardSchemeNotFound(address scheme);
     error NotUpdater();

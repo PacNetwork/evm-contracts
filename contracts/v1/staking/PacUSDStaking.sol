@@ -15,7 +15,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant REWARD_SCHEME_ROLE =
         keccak256("REWARD_SCHEME_ROLE");
-
+    uint256 public constant MAX_REWARD_SCHEMES = 5;
     IERC20 public STAKED_TOKEN;
     uint256 public PRECISION;
     uint256 public RATE_PRECISION;
@@ -116,6 +116,9 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         if (schemeIndexMap[scheme] != 0)
             revert RewardSchemeAlreadyAdded(scheme);
 
+        if (rewardSchemes.length > MAX_REWARD_SCHEMES) {
+            revert RewardSchemeArrayTooLong();
+        }
         // add the scheme
         rewardSchemes.push(scheme);
         uint256 index = rewardSchemes.length;
