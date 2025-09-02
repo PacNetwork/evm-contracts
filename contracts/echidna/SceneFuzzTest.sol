@@ -754,7 +754,7 @@ contract SceneFuzzTest is BaseFuzz {
 
         pricer.setPrice(newPrice);
 
-        try vault.mintReward() {
+        try vault.mintReward(newPrice) {
             successfulOperations++;
             totalOperations++;
         } catch {}
@@ -767,7 +767,7 @@ contract SceneFuzzTest is BaseFuzz {
     function _setPriceForVault1(uint256 newPrice) internal {
         if (newPrice >= MIN_PRICE && newPrice <= MAX_PRICE) {
             pricer.setPrice(newPrice);
-            try vault.mintReward() {
+            try vault.mintReward(newPrice) {
                 successfulOperations++;
             } catch {}
         }
@@ -780,7 +780,7 @@ contract SceneFuzzTest is BaseFuzz {
     function _setPriceForVault2(uint256 newPrice) internal {
         if (newPrice >= MIN_PRICE && newPrice <= MAX_PRICE) {
             pricer2.setPrice(newPrice);
-            try vault2.mintReward() {
+            try vault2.mintReward(newPrice) {
                 successfulOperations++;
             } catch {}
         }

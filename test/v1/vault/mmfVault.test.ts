@@ -508,7 +508,7 @@ describe("MMFVault", () => {
       );
 
       await Pricer.setPrice(parseEther("3")); // lastPrice = 2, currentPrice = 3
-      await expect(MMFVault.mintReward())
+      await expect(MMFVault.mintReward(parseEther("3")))
         .to.emit(MMFVault, "RewardMinted")
         .withArgs(
           Staking.target,
@@ -523,14 +523,14 @@ describe("MMFVault", () => {
 
     it("should not mint rewards if price does not increase", async () => {
       await Pricer.setPrice(parseEther("2")); // lastPrice = 2, currentPrice = 2
-      await expect(MMFVault.mintReward()).to.not.emit(MMFVault, "RewardMinted");
+      await expect(MMFVault.mintReward(parseEther("2"))).to.not.emit(MMFVault, "RewardMinted");
       expect(await MMFVault.lastPrice()).to.equal(parseEther("2"));
       expect(await Staking.updateCalled()).to.be.false;
     });
 
     it("should revert if price is zero", async () => {
       await Pricer.setPrice(parseEther("0"));
-      await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
+      await expect(MMFVault.mintReward(parseEther("0"))).to.be.revertedWithCustomError(
         MMFVault,
         "InvalidPrice"
       );
@@ -538,7 +538,7 @@ describe("MMFVault", () => {
 
     it("should update price if mmfVault balance is zero", async () => {
       await Pricer.setPrice(parseEther("3"));
-      await MMFVault.mintReward();
+      await MMFVault.mintReward(parseEther("3"));
       expect(await MMFVault.lastPrice()).to.equal(parseEther("3"));
     });
 
@@ -553,12 +553,12 @@ describe("MMFVault", () => {
       );
 
       await Pricer.setPrice(ethers.MaxUint256);
-      await expect(MMFVault.mintReward()).to.be.revertedWithPanic("0x11");
+      await expect(MMFVault.mintReward(ethers.MaxUint256)).to.be.revertedWithPanic("0x11");
     });
 
     it("should revert if paused", async () => {
       await MMFVault.connect(pauser).pause();
-      await expect(MMFVault.mintReward()).to.be.revertedWithCustomError(
+      await expect(MMFVault.mintReward(await Pricer.getLatestPrice())).to.be.revertedWithCustomError(
         MMFVault,
         "EnforcedPause"
       );
@@ -751,9 +751,9 @@ describe("MMFVault", () => {
      * Expected Result: Triggers panic code 0x11 (integer overflow/underflow)
      */
     it("should revert if mint fee calculation overflows", async function () {
-      // 1. Set extreme fee rate (close to 100%)
+      // 1. Set extreme fee rate (close to max fee)
       await MMFVault.connect(owner).updateMintFeeRate(
-        parseEther("0.9999999999")
+        parseEther("0.2499999999")
       );
       // 2. Use extremely large amount to trigger overflow risk
       const hugeMMFAmount = ethers.MaxUint256 / parseEther("2"); // Avoid initial value overflow
@@ -794,9 +794,9 @@ describe("MMFVault", () => {
         TIMESTAMP
       );
 
-      // 2. Set extreme fee rate (close to 100%)
+      // 2. Set extreme fee rate (close to max fee)
       await MMFVault.connect(owner).updateRedeemFeeRate(
-        parseEther("0.9999999999")
+        parseEther("0.24999999")
       );
       // 3. Use extremely large amount to trigger overflow risk
       const hugePacUSDAmount = ethers.MaxUint256 / parseEther("2");

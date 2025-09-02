@@ -441,7 +441,7 @@ contract PauseStateTest is BaseFuzz {
         }
 
         bool rewardSuccess = false;
-        try vault.mintReward() {
+        try vault.mintReward(newPrice) {
             rewardSuccess = true;
         } catch {}
 
