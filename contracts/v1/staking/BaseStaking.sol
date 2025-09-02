@@ -22,7 +22,10 @@ abstract contract BaseStaking is
     UUPSUpgradeable,
     PausableUpgradeable,
     ReentrancyGuardUpgradeable
-{
+{   
+    
+    uint256[50] private __gap; // Reserve space for future variables
+
     function __BaseStaking_init(
         address upgrader,
         address admin
