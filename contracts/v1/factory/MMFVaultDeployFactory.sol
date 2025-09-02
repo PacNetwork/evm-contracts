@@ -13,8 +13,8 @@ import {AddressFactory} from "./AddressFactory.sol";
  *      Implements the IDeployFactory interface to standardize deployment processes.
  */
 contract MMFVaultDeployFactory is IDeployFactory {
-    AddressFactory addressFactory;
-    address owner;
+    AddressFactory immutable addressFactory;
+    address immutable owner;
 
     /**
      * @dev Constructor to initialize the factory with a reference to AddressFactory

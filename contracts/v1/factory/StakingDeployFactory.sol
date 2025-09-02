@@ -8,8 +8,8 @@ import {IDeployFactory} from "./interfaces/IDeployFactory.sol";
 import {AddressFactory} from "./AddressFactory.sol";
 
 contract StakingDeployFactory is IDeployFactory {
-    AddressFactory addressFactory;
-    address owner;
+    AddressFactory immutable addressFactory;
+    address immutable owner;
 
     constructor(AddressFactory _addressFactory) {
         addressFactory = _addressFactory;

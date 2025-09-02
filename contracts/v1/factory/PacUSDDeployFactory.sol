@@ -13,8 +13,8 @@ import {AddressFactory} from "./AddressFactory.sol";
  *      Follows the UUPS proxy pattern and validates addresses against AddressFactory.
  */
 contract PacUSDDeployFactory is IDeployFactory {
-    AddressFactory addressFactory;
-    address owner;
+    AddressFactory immutable addressFactory;
+    address immutable owner;
 
     /**
      * @dev Constructor to set reference to AddressFactory for address validation

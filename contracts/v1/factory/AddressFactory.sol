@@ -27,17 +27,17 @@ contract AddressFactory {
     address public stakingImplAddress;
 
     // @dev Hash of the MMFVault contract bytecode
-    bytes32 vaultHash;
+    bytes32 immutable vaultHash;
     // @dev Salt used for deterministic deployment of MMFVault
-    bytes32 pacUSDHash;
+    bytes32 immutable pacUSDHash;
     // @dev Salt used for deterministic deployment of PacUSD
-    bytes32 pacUSDSalt;
+    bytes32 immutable pacUSDSalt;
     // @dev Hash of the Staking contract bytecode
-    bytes32 stakingHash;
+    bytes32 immutable stakingHash;
     // @dev Salt used for deterministic deployment of Staking
-    bytes32 stakingSalt;
+    bytes32 immutable stakingSalt;
 
-    address owner;
+    address immutable owner;
 
     /**
      * @dev Constructor to initialize the factory with deployment parameters
