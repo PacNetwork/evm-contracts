@@ -358,6 +358,12 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         } else {
             // no distribution, all goes to dust
             rewardDustAccumulator = rewardToBeDistributed;
+
+            emit RewardDistributed(
+                _msgSender(),
+                0,
+                accumulatedRewardRate
+            );
         }
 
         // update the external reward schemes
