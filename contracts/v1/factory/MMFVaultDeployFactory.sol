@@ -33,7 +33,6 @@ contract MMFVaultDeployFactory is IDeployFactory {
      * @param mmfVaultSalts Salt for deterministic address calculation
      * @param admin Address to assign  admin roles
      * @param upgrader Address for upgrade administration
-     * @return mmfVaultProxy Address of the deployed MMFVault proxy contract
      */
     function deployContracts(
         address[] memory mmfTokenAddresses,
@@ -41,7 +40,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
         bytes32[] memory mmfVaultSalts,
         address admin,
         address upgrader
-    ) external returns (address mmfVaultProxy) {
+    ) external {
         if (msg.sender != owner) revert NotOwner();
         // --------------------
         // Input parameter validation
@@ -86,7 +85,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             // --------------------
             // Deploy ERC1967Proxy for MMFVault
             // --------------------
-            mmfVaultProxy = Create2.deploy(
+            address mmfVaultProxy = Create2.deploy(
                 0,
                 salt,
                 abi.encodePacked(
