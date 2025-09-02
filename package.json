@@ -14,9 +14,11 @@
     "deploy_vault": "hardhat run scripts/deploy/deploy_vault_local.ts --network localhost",
     "deploy_vault:sepolia": "hardhat run scripts/deploy/deploy_vault.ts --network sepolia",
     "deploy_vault:mainnet": "hardhat run scripts/deploy/deploy_vault.ts --network mainnet",
+    "updatePacUSD:sepolia": "hardhat run scripts/upgrade/update_pacusd.ts --network sepolia",
     "upgradePacUSD:sepolia": "hardhat run scripts/upgrade/upgrade_pacusd.ts --network sepolia",
     "upgradeVault:sepolia": "hardhat run scripts/upgrade/upgrade_vault.ts --network sepolia",
     "upgradeStaking:sepolia": "hardhat run scripts/upgrade/upgrade_staking.ts --network sepolia",
+    "updateStaking:sepolia": "hardhat run scripts/upgrade/update_staking.ts --network sepolia",
     "coverage": "npm run compile && npx hardhat coverage"
   },
   "directories": {

@@ -67,9 +67,7 @@ contract PacUSD is
         address[] memory minters
     ) public initializer {
         if (
-            admin == address(0) ||
-            upgrader == address(0) ||
-            minters.length == 0
+            admin == address(0) || upgrader == address(0) || minters.length == 0
         ) revert ZeroAddress();
         __ERC20_init("PAC USD Stablecoin", "PacUSD");
         __ERC20Permit_init("PAC USD Stablecoin");
@@ -87,6 +85,18 @@ contract PacUSD is
             if (minters[i] != address(0)) {
                 _minters[minters[i]] = true;
             }
+        }
+    }
+
+    /**
+     * @dev Updates minter permissions
+     * This function is used to grant minting permissions to a new address, and can only be called by the contract upgrader
+     * When the new minter address is not the zero address, it will be added to the minters mapping with permissions granted
+     *
+     */
+    function updateMinter(address newMinter) external onlyOwner {
+        if (newMinter != address(0)) {
+            _minters[newMinter] = true;
         }
     }
 
@@ -478,5 +488,4 @@ contract PacUSD is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
-
 }

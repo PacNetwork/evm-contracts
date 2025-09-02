@@ -163,6 +163,12 @@ interface IPacUSD {
     function isMinter(address account) external view returns (bool);
 
 
+      /**
+     * @dev Updates minter permissions
+     * This function is used to grant minting permissions to a new address, and can only be called by the contract upgrader
+     * When the new minter address is not the zero address, it will be added to the minters mapping with permissions granted
+     */
+    function updateMinter(address newMinter) external;
      /**
      * @notice Gets the implementation version of the contract
      * @return versionString The semantic version string (e.g., "v1", "v2.1")

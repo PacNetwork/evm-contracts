@@ -89,6 +89,15 @@ interface IPacUSDStaking {
      */
     function distributeReward(uint256 newReward) external;
 
+      /**
+     * @dev Updates updater permissions
+     *
+     * This function grants updating permissions to a new address, and can only be called by the contract upgrader.
+     * When the new updater address is not the zero address, it will be added to the UPDATERS mapping with permissions enabled.
+     *
+     */
+    function updateUpdater(address newUpdater) external;
+
     /**
      * @notice Returns the version of the staking contract.
      * @return The version string.
