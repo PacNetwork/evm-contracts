@@ -76,6 +76,7 @@ contract PacUSD is
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Ownable_init(upgrader);
+         __Ownable2Step_init();
         // Set up roles
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 

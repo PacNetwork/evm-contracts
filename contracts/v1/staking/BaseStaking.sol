@@ -37,6 +37,7 @@ abstract contract BaseStaking is
         __Context_init();
         __AccessControl_init();
         __Ownable_init(upgrader);
+        __Ownable2Step_init();
         __UUPSUpgradeable_init();
         __Pausable_init();
         __ReentrancyGuard_init();

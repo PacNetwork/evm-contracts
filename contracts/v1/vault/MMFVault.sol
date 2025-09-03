@@ -86,6 +86,7 @@ contract MMFVault is
             upgrader == address(0)
         ) revert ZeroAddress();
         __Ownable_init(upgrader);
+        __Ownable2Step_init();
         __UUPSUpgradeable_init();
         __AccessControl_init();
         __ReentrancyGuard_init();
