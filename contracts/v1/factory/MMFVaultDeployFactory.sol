@@ -13,8 +13,8 @@ import {AddressFactory} from "./AddressFactory.sol";
  *      Implements the IDeployFactory interface to standardize deployment processes.
  */
 contract MMFVaultDeployFactory is IDeployFactory {
-    AddressFactory addressFactory;
-    address owner;
+    AddressFactory immutable addressFactory;
+    address immutable owner;
 
     /**
      * @dev Constructor to initialize the factory with a reference to AddressFactory
@@ -33,7 +33,6 @@ contract MMFVaultDeployFactory is IDeployFactory {
      * @param mmfVaultSalts Salt for deterministic address calculation
      * @param admin Address to assign  admin roles
      * @param upgrader Address for upgrade administration
-     * @return mmfVaultProxy Address of the deployed MMFVault proxy contract
      */
     function deployContracts(
         address[] memory mmfTokenAddresses,
@@ -41,7 +40,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
         bytes32[] memory mmfVaultSalts,
         address admin,
         address upgrader
-    ) external returns (address mmfVaultProxy) {
+    ) external {
         if (msg.sender != owner) revert NotOwner();
         // --------------------
         // Input parameter validation
@@ -86,7 +85,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             // --------------------
             // Deploy ERC1967Proxy for MMFVault
             // --------------------
-            mmfVaultProxy = Create2.deploy(
+            address mmfVaultProxy = Create2.deploy(
                 0,
                 salt,
                 abi.encodePacked(
@@ -124,7 +123,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             // --------------------
             // Emit deployment event
             // --------------------
-            emit ContractsDeployed(msg.sender, mmfVaultProxy);
+            emit ContractsDeployed(msg.sender, mmfVaultProxy,mmfVaultImpl);
         }
     }
 }

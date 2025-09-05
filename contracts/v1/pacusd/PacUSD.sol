@@ -35,17 +35,17 @@ contract PacUSD is
     bytes32 public constant RESCUER_ROLE = keccak256("RESCUER_ROLE");
 
     // Minter addresses
-    mapping(address => bool) private _minters;
+    mapping(address => bool) internal _minters;
 
     // Blocklist mapping to freeze individual accounts
-    mapping(address => bool) private _blocklist;
+    mapping(address => bool) internal _blocklist;
     //Transaction state tracking
-    uint256 private constant TX_STATE_DEFAULT = 0;
-    uint256 private constant TX_STATE_AVAILABLE = 1;
-    uint256 private constant TX_STATE_EXECUTED = 2;
-    uint256 private constant TX_STATE_CANCELED = 3;
-    mapping(bytes32 => uint256) private _mintTxs;
-    mapping(bytes32 => uint256) private _burnTxs;
+    uint256 internal constant TX_STATE_DEFAULT = 0;
+    uint256 internal constant TX_STATE_AVAILABLE = 1;
+    uint256 internal constant TX_STATE_EXECUTED = 2;
+    uint256 internal constant TX_STATE_CANCELED = 3;
+    mapping(bytes32 => uint256) internal _mintTxs;
+    mapping(bytes32 => uint256) internal _burnTxs;
     uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -78,6 +78,7 @@ contract PacUSD is
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __Ownable_init(upgrader);
+        __Ownable2Step_init();
         // Set up roles
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
 

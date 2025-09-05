@@ -32,9 +32,11 @@ contract MMFVault is
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MINT_REWARD_ROLE = keccak256("MINT_REWARD_ROLE");
 
     uint256 private constant PRICER_PRECISION = 10 ** 18;
     uint256 private constant FEE_PRECISION = 10 ** 18; // 1e18 = 100% fee, 1e16 = 1% fee
+    uint256 private constant MAX_FEE_RATE = 25 * 10 ** 16; //25% fee
 
     // Token and pricer contracts
     IERC20 public mmfToken;
@@ -52,7 +54,7 @@ contract MMFVault is
     uint256 public lastPrice;
     uint256 mmfTokenPrecision;
     uint256 pacUSDPrecision;
-    uint256 _totalMMFToken;
+    uint256 internal _totalMMFToken;
     uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -85,6 +87,7 @@ contract MMFVault is
             upgrader == address(0)
         ) revert ZeroAddress();
         __Ownable_init(upgrader);
+        __Ownable2Step_init();
         __UUPSUpgradeable_init();
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -144,13 +147,13 @@ contract MMFVault is
     /**
      * @notice Updates the fee rate for mintPacUSD (MMF → PacUSD)
      * @dev Only callable by  DEFAULT_ADMIN_ROLE
-     * @param newMintFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     * @param newMintFeeRate New fee rate (1e18 = 100%, use FEE_PRECISION for scaling)
      */
     function updateMintFeeRate(
         uint256 newMintFeeRate
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (feeReceiver == address(0)) revert FeeReceiverRequired();
-        if (newMintFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        if (newMintFeeRate > MAX_FEE_RATE) revert FeeRateExceedsMax();
         emit MintFeeRateUpdated(mintFeeRate, newMintFeeRate);
         mintFeeRate = newMintFeeRate;
     }
@@ -158,13 +161,13 @@ contract MMFVault is
     /**
      * @notice Updates the fee rate for redeemMMF (PacUSD → MMF)
      * @dev Only callable by  DEFAULT_ADMIN_ROLE
-     * @param newRedeemFeeRate New fee rate (max 1e18 = 100%, use FEE_PRECISION for scaling)
+     * @param newRedeemFeeRate New fee rate (1e18 = 100%, use FEE_PRECISION for scaling)
      */
     function updateRedeemFeeRate(
         uint256 newRedeemFeeRate
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (feeReceiver == address(0)) revert FeeReceiverRequired();
-        if (newRedeemFeeRate > FEE_PRECISION) revert FeeRateExceedsMax(); // Prevent fee > 100%
+        if (newRedeemFeeRate > MAX_FEE_RATE) revert FeeRateExceedsMax();
         emit RedeemFeeRateUpdated(redeemFeeRate, newRedeemFeeRate);
         redeemFeeRate = newRedeemFeeRate;
     }
@@ -267,7 +270,7 @@ contract MMFVault is
 
         // Calculate MMF amount (1 MMF = price PacUSD)
         uint256 finalAmount = amount - redeemFee;
-    
+
         uint256 mmfAmount = (finalAmount *
             mmfTokenPrecision *
             PRICER_PRECISION) /
@@ -293,11 +296,27 @@ contract MMFVault is
     }
 
     /**
-     * @notice Distributes rewards based on price changes
-     * @dev Callable by anyone, mints PacUSD rewards and updates staking
+     * @dev Mints rewards for stakers based on price increases
+     *
+     * This function is called by an administrator to calculate and distribute rewards
+     * to the staking contract when the latest price is higher than the last recorded price.
+     * The reward amount is calculated based on the price difference, total staked MMF tokens,
+     * and precision conversion factors.
+     *
+     * Restrictions:
+     * - Contract must not be paused (whenNotPaused)
+     * - Protected against reentrancy attacks (nonReentrant)
+     * - Only callable by addresses with DEFAULT_ADMIN_ROLE (onlyRole)
+     *
+     * @param rewardPrice The price provided by the caller, which must match the latest price
+     *                    to ensure accuracy
+     *
      */
-    function mintReward() public whenNotPaused nonReentrant {
+    function mintReward(
+        uint256 rewardPrice
+    ) public whenNotPaused nonReentrant onlyRole(MINT_REWARD_ROLE) {
         uint256 currentPrice = pricer.getLatestPrice();
+        if (rewardPrice != currentPrice) revert MismatchPrice();
         if (currentPrice < lastPrice) revert InvalidPrice();
         if (currentPrice == lastPrice) return; // No price change, no reward
         if (currentPrice > lastPrice) {

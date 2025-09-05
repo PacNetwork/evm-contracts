@@ -14,8 +14,9 @@ interface IMMFVault {
     error ZeroBalance();
     error InsufficientBalance();
     error InvalidPrice();
+    error MismatchPrice();
     error RewardNotMinted();
-    error FeeRateExceedsMax(); 
+    error FeeRateExceedsMax();
     error FeeCalculationFailed();
     error FeeReceiverRequired();
     // Events
@@ -109,10 +110,23 @@ interface IMMFVault {
     ) external;
 
     /**
-     * @notice Distributes rewards based on price changes
-     * @dev Callable by anyone, mints PacUSD rewards and updates staking
+     * @dev Mints rewards for stakers based on price increases
+     *
+     * This function is called by an administrator to calculate and distribute rewards
+     * to the staking contract when the latest price is higher than the last recorded price.
+     * The reward amount is calculated based on the price difference, total staked MMF tokens,
+     * and precision conversion factors.
+     *
+     * Restrictions:
+     * - Contract must not be paused (whenNotPaused)
+     * - Protected against reentrancy attacks (nonReentrant)
+     * - Only callable by addresses with DEFAULT_ADMIN_ROLE (onlyRole)
+     *
+     * @param rewardPrice The price provided by the caller, which must match the latest price
+     *                    to ensure accuracy
+     *
      */
-    function mintReward() external;
+    function mintReward(uint256 rewardPrice) external;
 
     /**
      * @notice Gets the implementation version of the contract

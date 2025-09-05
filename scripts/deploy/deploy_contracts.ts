@@ -105,6 +105,7 @@ export async function deploy(useCache: boolean = true) {
 
   //vault
   const vaultPauserAddress = process.env.VAULT_PAUSER_ADDRESS || "";
+  const vaultMintRewardAddress = process.env.VAULT_MINT_REWARD_ADDRESS || "";
 
   //stking
   const stakingReserveAddress = process.env.STAKING_RESERVE_ADDRESS || "";
@@ -112,7 +113,6 @@ export async function deploy(useCache: boolean = true) {
   const stakingRewardSchemeAddress =
     process.env.STAKING_REWARD_SCHEME_ROLE || "";
   const stakingReserveSetAddress = process.env.STAKING_RESERVE_SET_ROLE || "";
-
 
   deploymentState.addresses.priceAddress = pricerAddress;
   deploymentState.addresses.mmfTokenAddress = mmfTokenAddress;
@@ -129,6 +129,7 @@ export async function deploy(useCache: boolean = true) {
   console.log(`-- APPROVER_ADDRESS: ${pacUSDApproverAddress}`);
   console.log(`-- BLOCKLISTER_ADDRESS: ${pacUSDBlocklisterAddress}`);
   console.log(`MMFVault Permission:`);
+  console.log(`-- VAULT_MINT_REWARD_ADDRESS: ${vaultMintRewardAddress}`);
   console.log(`-- PAUSER_ADDRESS: ${vaultPauserAddress}`);
   console.log(`Staking Permission:`);
   console.log(`-- RESERVE_ADDRESS: ${stakingReserveAddress}`);
@@ -171,17 +172,18 @@ export async function deploy(useCache: boolean = true) {
     UPGRADER_ADDRESS: upgraderAddress,
     ADMIN_ADDRESS: adminAddress,
     //PACUSD
-    PACUSD_PAUSER_ADDRESS:pacUSDPauserAddress,
-    RESCUER_ADDRESS:pacUSDRescuerAddress,
-    APPROVER_ADDRESS:pacUSDApproverAddress,
-    BLOCKLISTER_ADDRESS:pacUSDBlocklisterAddress,
+    PACUSD_PAUSER_ADDRESS: pacUSDPauserAddress,
+    RESCUER_ADDRESS: pacUSDRescuerAddress,
+    APPROVER_ADDRESS: pacUSDApproverAddress,
+    BLOCKLISTER_ADDRESS: pacUSDBlocklisterAddress,
     //mmfvault
-    MMFVAULT_PAUSER_ADDRESS:vaultPauserAddress,
-    //staking 
-    RESERVE_ADDRESS:stakingReserveAddress,
-    STAKING_PAUSER_ROLE:stakingPauserAddress,
-    RESERVE_SET_ROLE:stakingReserveSetAddress,
-    REWARD_SCHEME_ROLE:stakingRewardSchemeAddress,
+    MMFVAULT_PAUSER_ADDRESS: vaultPauserAddress,
+    VAULT_MINT_REWARD_ADDRESS: vaultMintRewardAddress,
+    //staking
+    RESERVE_ADDRESS: stakingReserveAddress,
+    STAKING_PAUSER_ROLE: stakingPauserAddress,
+    RESERVE_SET_ROLE: stakingReserveSetAddress,
+    REWARD_SCHEME_ROLE: stakingRewardSchemeAddress,
   };
 
   const missingVariables = Object.entries(requiredVariables)
@@ -588,14 +590,14 @@ export async function deploy(useCache: boolean = true) {
       pacUSDPauserAddress,
       "PAUSER_ROLE"
     );
-    
+
     await checkRole(
       pacUSD,
       await pacUSD.BLOCKLISTER_ROLE(),
       pacUSDBlocklisterAddress,
       "BLOCKLISTER_ROLE"
     );
-    
+
     await checkRole(
       pacUSD,
       await pacUSD.RESCUER_ROLE(),
@@ -655,6 +657,13 @@ export async function deploy(useCache: boolean = true) {
 
       await checkRole(
         vault,
+        await vault.MINT_REWARD_ROLE(),
+        vaultMintRewardAddress,
+        "MINT_REWARD_ROLE"
+      );
+
+      await checkRole(
+        vault,
         await vault.DEFAULT_ADMIN_ROLE(),
         adminAddress,
         "DEFAULT_ADMIN_ROLE"
@@ -689,10 +698,7 @@ export async function deploy(useCache: boolean = true) {
 
     console.log("\n[3/3] Configuring Staking Role Permissions");
     const stakingAddress = await addressFactory.stakingAddress();
-    const staking = await ethers.getContractAt(
-      "PacUSDStaking",
-      stakingAddress
-    );
+    const staking = await ethers.getContractAt("PacUSDStaking", stakingAddress);
 
     await checkRole(
       staking,
