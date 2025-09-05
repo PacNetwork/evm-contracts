@@ -123,7 +123,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             // --------------------
             // Emit deployment event
             // --------------------
-            emit ContractsDeployed(msg.sender, mmfVaultProxy);
+            emit ContractsDeployed(msg.sender, mmfVaultProxy,mmfVaultImpl);
         }
     }
 }

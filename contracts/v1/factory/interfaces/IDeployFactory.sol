@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 interface IDeployFactory {
     // Event emitted upon successful deployment
-    event ContractsDeployed(address indexed sender, address proxy);
+    event ContractsDeployed(address indexed sender, address proxy,address implment);
     // Errors
     error InvaildParams();
     error DeploymentFailed();

@@ -92,6 +92,6 @@ contract StakingDeployFactory is IDeployFactory {
         if (!success) revert InitializationFailed();
 
         // Emit deployment event
-        emit ContractsDeployed(msg.sender, pacUsdStakingProxy);
+        emit ContractsDeployed(msg.sender, pacUsdStakingProxy,pacUsdStakingImpl);
     }
 }

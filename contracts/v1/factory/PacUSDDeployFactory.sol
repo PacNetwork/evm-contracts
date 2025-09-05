@@ -99,6 +99,6 @@ contract PacUSDDeployFactory is IDeployFactory {
         // --------------------
         // Emit deployment event
         // --------------------
-        emit ContractsDeployed(msg.sender, pacUSDProxy);
+        emit ContractsDeployed(msg.sender, pacUSDProxy,pacUSDImpl);
     }
 }
