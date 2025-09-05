@@ -54,7 +54,7 @@ contract MMFVault is
     uint256 public lastPrice;
     uint256 mmfTokenPrecision;
     uint256 pacUSDPrecision;
-    uint256 _totalMMFToken;
+    uint256 internal _totalMMFToken;
     uint256[50] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
