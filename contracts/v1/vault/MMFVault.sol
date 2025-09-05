@@ -32,6 +32,7 @@ contract MMFVault is
     using SafeERC20 for IERC20;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MINT_REWARD_ROLE = keccak256("MINT_REWARD_ROLE");
 
     uint256 private constant PRICER_PRECISION = 10 ** 18;
     uint256 private constant FEE_PRECISION = 10 ** 18; // 1e18 = 100% fee, 1e16 = 1% fee
@@ -313,7 +314,7 @@ contract MMFVault is
      */
     function mintReward(
         uint256 rewardPrice
-    ) public whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) public whenNotPaused nonReentrant onlyRole(MINT_REWARD_ROLE) {
         uint256 currentPrice = pricer.getLatestPrice();
         if (rewardPrice != currentPrice) revert MismatchPrice();
         if (currentPrice < lastPrice) revert InvalidPrice();

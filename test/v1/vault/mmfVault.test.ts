@@ -81,6 +81,7 @@ describe("MMFVault", () => {
 
     await MMFVault.waitForDeployment();
     await MMFVault.grantRole(await MMFVault.PAUSER_ROLE(), pauser.address);
+    await MMFVault.grantRole(await MMFVault.MINT_REWARD_ROLE(), owner.address);
 
     // Initialize PacUSD with MMFVault as minter
     await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target]);
