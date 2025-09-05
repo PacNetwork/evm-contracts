@@ -47,11 +47,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     event Unstaked(address indexed user, uint256 amount);
     event Restaked(address indexed user, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
-    event RewardDistributed(
-        address indexed updater,
-        uint256 newReward,
-        uint256 rewardRate
-    );
+    event RewardDistributed(address indexed updater, uint256 newReward, uint256 rewardRate);
     event ReserveSet(address indexed reserve);
     event RewardSchemeAdded(address indexed scheme);
     event RewardSchemeRemoved(address indexed scheme);
@@ -91,19 +87,6 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
 
         for (uint256 i; i < len; ++i) {
             UPDATERS[updaters[i]] = true;
-        }
-    }
-
-    /**
-     * @dev Updates updater permissions
-     *
-     * This function grants updating permissions to a new address, and can only be called by the contract upgrader.
-     * When the new updater address is not the zero address, it will be added to the UPDATERS mapping with permissions enabled.
-     *
-     */
-    function updateUpdater(address newUpdater) external onlyOwner {
-        if (newUpdater != address(0)) {
-            UPDATERS[newUpdater] = true;
         }
     }
 
@@ -425,7 +408,8 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         uint256 newReward,
         uint256 totalSupply
     ) internal view virtual returns (uint256) {
-        return (newReward * RATE_PRECISION) / totalSupply;
+        return
+            (newReward * RATE_PRECISION) / totalSupply;
     }
 
     function _calculateReserveInc(

@@ -1,15 +1,15 @@
 import { ethers, upgrades, network } from "hardhat";
-import { safeUpgrade } from "./safe_upgrade";
+import { safeUpgrade } from "./safe";
 import dotenv from "dotenv";
 dotenv.config();
 
-const UpgradeContract = "PacUSD";
+const UpgradeContract="PacUSD"
 
 /**
  * UUPS Contract Upgrade Script
- *
+ * 
  * This script facilitates the upgrade of an existing UUPS (Universal Upgradeable Proxy Standard)
- * contract to a new implementation. It includes comprehensive validation checks, deployment
+ * contract to a new implementation. It includes comprehensive validation checks, deployment 
  * verification, and error handling to ensure a secure and smooth upgrade process.
  */
 async function main() {
@@ -67,36 +67,26 @@ async function main() {
   }
 
   // Get current implementation address
-  const currentImplementationAddress =
-    await upgrades.erc1967.getImplementationAddress(contractAddress);
-
+  const currentImplementationAddress = await upgrades.erc1967.getImplementationAddress(contractAddress);
+  
   // Deploy new implementation contract
   console.log("[Info] Deploying new implementation...");
   const newImplementation = await NewContract.deploy();
   await newImplementation.waitForDeployment();
-
+  
   // Check if new implementation is different from current
   if (currentImplementationAddress === newImplementation.target) {
-    console.log(
-      "[Info] New implementation is the same as current. Upgrade aborted."
-    );
+    console.log("[Info] New implementation is the same as current. Upgrade aborted.");
     return;
   }
-
+  
   // Log new implementation address
   console.log(`[Info] New implementation address: ${newImplementation.target}`);
-
+  
   // Perform safe upgrade using custom utility
   console.log("[Info] Initiating safe upgrade process...");
-
-  let initData = "0x";
-
-  //call safe upgrade
-  await safeUpgrade(
-    proxyContract,
-    newImplementation.target.toString(),
-    initData
-  );
+  //default not call init，
+  await safeUpgrade(proxyContract, newImplementation.target.toString(), "0x");
 }
 
 // Execute main function with proper error handling
