@@ -11,6 +11,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 contract AddressFactory {
     error NotOwner();
     error InvalidParams();
+    error SaltAlreadyExists(bytes32 salt);
 
     address[] public vaultAddresses;
     address[] public vaultImplAddresses;
@@ -99,6 +100,11 @@ contract AddressFactory {
         uint256 length = salts.length;
         for (uint i; i < length; ++i) {
             bytes32 salt = salts[i];
+            
+            if (saltIndexMap[salt] != 0) {
+                revert SaltAlreadyExists(salt);
+            }
+
             (address vaultAddress, address vaultImplAddress) = _computeAddress(
                 salt,
                 vaultHash,
