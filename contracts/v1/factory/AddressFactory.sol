@@ -29,7 +29,7 @@ contract AddressFactory {
 
     // @dev Hash of the MMFVault contract bytecode
     bytes32 immutable vaultHash;
-    // @dev Salt used for deterministic deployment of MMFVault
+    // @dev Hash of the PacUSD contract bytecode
     bytes32 immutable pacUSDHash;
     // @dev Salt used for deterministic deployment of PacUSD
     bytes32 immutable pacUSDSalt;
