@@ -10,7 +10,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
  */
 contract AddressFactory {
     error NotOwner();
-    error InvaildParams();
+    error InvalidParams();
 
     address[] public vaultAddresses;
     address[] public vaultImplAddresses;
@@ -94,7 +94,7 @@ contract AddressFactory {
         bytes32[] memory salts
     ) external {
         if (msg.sender != owner) revert NotOwner();
-        if (salts.length == 0) revert InvaildParams();
+        if (salts.length == 0) revert InvalidParams();
         uint256 count = vaultAddresses.length;
         uint256 length = salts.length;
         for (uint i; i < length; ++i) {
