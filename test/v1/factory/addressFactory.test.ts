@@ -185,8 +185,6 @@ describe("AddressFactory", () => {
     // 3. Deploy Staking contract
     // This contract handles staking of PacUSD tokens
     tx = await stakingDeployFactory.deployContracts(
-      [Pricer.target], // Price oracle
-      [MMFToken.target],
       admin, // Owner of the staking contract
       upgrader, // Admin address
       admin, // Reserve address

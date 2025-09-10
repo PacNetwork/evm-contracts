@@ -67,6 +67,11 @@ contract MMFVaultDeployFactory is IDeployFactory {
             uint256 index = addressFactory.saltIndexMap(salt);
             address mmfTokenAddress = mmfTokenAddresses[i];
             address pricerAddress = pricerAddresses[i];
+            if (
+                mmfTokenAddress == address(0) || pricerAddress == address(0)
+            ) {
+                revert ZeroAddress();
+            }
             // --------------------
             // Deploy MMFVault implementation contract
             // --------------------
@@ -123,7 +128,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
             // --------------------
             // Emit deployment event
             // --------------------
-            emit ContractsDeployed(msg.sender, mmfVaultProxy,mmfVaultImpl);
+            emit ContractsDeployed(msg.sender, mmfVaultProxy, mmfVaultImpl);
         }
     }
 }
