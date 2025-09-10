@@ -110,7 +110,7 @@ contract PacUSD is
 
     /**
      * @notice Authorizes an upgrade to a new contract implementation.
-     * @dev Implements UUPS upgradeability, only callable by an account with ADMIN_ROLE.
+     * @dev Implements UUPS upgradeability, only callable by the upgrader.
      * @param newImpl The address of the new contract implementation.
      */
     function _authorizeUpgrade(address newImpl) internal override onlyOwner {

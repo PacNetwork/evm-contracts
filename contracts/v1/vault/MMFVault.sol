@@ -109,7 +109,7 @@ contract MMFVault is
 
     /**
      * @notice Authorizes contract upgrades (UUPS pattern)
-     * @dev Only callable by admin role
+     * @dev Only callable by the upgrader
      */
     function _authorizeUpgrade(address newImpl) internal override onlyOwner {
         if (newImpl == address(0)) revert ZeroAddress();
