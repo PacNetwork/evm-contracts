@@ -282,7 +282,7 @@ contract PacUSD is
 
     /**
      * @notice Mints reward tokens to a specified address.
-     * @dev Only callable by an account with APPROVER_ROLE when not paused, with reentrancy protection.
+     * @dev Only callable by the minter when not paused, with reentrancy protection.
      *      Reverts if the recipient is the zero address or blocklisted. Emits a MintReward event.
      * @param amount The amount of tokens to mint as a reward.
      * @param to The address to receive the reward tokens.
