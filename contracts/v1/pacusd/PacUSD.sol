@@ -292,6 +292,7 @@ contract PacUSD is
         address to
     ) external onlyMinter whenNotPaused notBlocklisted(to) nonReentrant {
         if (to == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
         _mint(to, amount);
         emit MintReward(to, amount);
     }
@@ -301,7 +302,7 @@ contract PacUSD is
      * @dev This function is restricted to accounts with the `onlyMinter` role, ensuring only authorized contracts (e.g., MMFVault)
      *      can mint tokens for fee-related use cases. It includes core security checks (zero-address prevention, pause state,
      *      blocklist validation) and follows non-reentrant design to avoid reentrancy attacks.
-     * @param amount The quantity of PacUSD tokens to mint (must be non-zero, though zero check may be handled by underlying `_mint` logic)
+     * @param amount The quantity of PacUSD tokens to mint
      * @param to The recipient address that will receive the minted PacUSD tokens (fee receiver, typically a designated account)
      */
     function mintFee(
@@ -309,6 +310,7 @@ contract PacUSD is
         address to
     ) external onlyMinter whenNotPaused notBlocklisted(to) nonReentrant {
         if (to == address(0)) revert ZeroAddress();
+        if (amount == 0) revert ZeroAmount();
         _mint(to, amount);
         emit MintFee(to, amount);
     }
@@ -479,5 +481,4 @@ contract PacUSD is
     function version() external pure virtual returns (string memory) {
         return "v1";
     }
-
 }
