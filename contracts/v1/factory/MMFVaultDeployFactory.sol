@@ -64,12 +64,15 @@ contract MMFVaultDeployFactory is IDeployFactory {
 
         for (uint i; i < length; ++i) {
             bytes32 salt = mmfVaultSalts[i];
-            uint256 index = addressFactory.saltIndexMap(salt);
+            uint256 saltIndex = addressFactory.saltIndexMap(salt);
+            if (saltIndex == 0) {
+                revert InvaildParams();
+            }
+            uint256 index = saltIndex - 1;
             address mmfTokenAddress = mmfTokenAddresses[i];
             address pricerAddress = pricerAddresses[i];
-            if (
-                mmfTokenAddress == address(0) || pricerAddress == address(0)
-            ) {
+
+            if (mmfTokenAddress == address(0) || pricerAddress == address(0)) {
                 revert ZeroAddress();
             }
             // --------------------

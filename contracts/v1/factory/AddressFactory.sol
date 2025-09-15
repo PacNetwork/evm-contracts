@@ -96,11 +96,11 @@ contract AddressFactory {
     ) external {
         if (msg.sender != owner) revert NotOwner();
         if (salts.length == 0) revert InvalidParams();
-        uint256 count = vaultAddresses.length;
+        uint256 count = vaultAddresses.length + 1;
         uint256 length = salts.length;
         for (uint i; i < length; ++i) {
             bytes32 salt = salts[i];
-            
+
             if (saltIndexMap[salt] != 0) {
                 revert SaltAlreadyExists(salt);
             }
