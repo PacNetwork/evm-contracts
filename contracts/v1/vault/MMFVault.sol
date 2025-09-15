@@ -306,7 +306,7 @@ contract MMFVault is
      * Restrictions:
      * - Contract must not be paused (whenNotPaused)
      * - Protected against reentrancy attacks (nonReentrant)
-     * - Only callable by addresses with DEFAULT_ADMIN_ROLE (onlyRole)
+     * - Only callable by addresses with MINT_REWARD_ROLE (onlyRole)
      *
      * @param rewardPrice The price provided by the caller, which must match the latest price
      *                    to ensure accuracy
