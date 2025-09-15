@@ -119,7 +119,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         if (schemeIndexMap[scheme] != 0)
             revert RewardSchemeAlreadyAdded(scheme);
 
-        if (rewardSchemes.length > MAX_REWARD_SCHEMES) {
+        if (rewardSchemes.length >= MAX_REWARD_SCHEMES) {
             revert RewardSchemeArrayTooLong();
         }
         // add the scheme
