@@ -342,7 +342,13 @@ contract PacUSD is
         IERC20 tokenContract,
         address to,
         uint256 amount
-    ) external onlyRole(RESCUER_ROLE) notBlocklisted(to) nonReentrant {
+    )
+        external
+        onlyRole(RESCUER_ROLE)
+        notBlocklisted(to)
+        nonReentrant
+        whenNotPaused
+    {
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0) revert ZeroAmount();
         if (tokenContract.balanceOf(address(this)) < amount)
