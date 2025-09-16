@@ -51,13 +51,26 @@ contract MMFVaultDeployFactory is IDeployFactory {
             mmfTokenAddresses.length == 0 ||
             admin == address(0) ||
             upgrader == address(0)
-        ) revert InvaildParams();
+        ) revert InvalidParams();
+        uint256 length = mmfTokenAddresses.length;
+
+        for (uint i; i < length; ++i) {
+            bytes32 salt = mmfVaultSalts[i];
+            uint256 saltIndex = addressFactory.saltIndexMap(salt);
+            if (saltIndex == 0) {
+                revert InvalidParams();
+            }
+            address mmfTokenAddress = mmfTokenAddresses[i];
+            address pricerAddress = pricerAddresses[i];
+            if (mmfTokenAddress == address(0) || pricerAddress == address(0)) {
+                revert ZeroAddress();
+            }
+        }
 
         // Retrieve related contract addresses from AddressFactory
-        address pacUSDAddress = addressFactory.pacUSDAddress();
+        address pacUSDAInvalidParamsessFactory.pacUSDAddress();
         address stakingAddress = addressFactory.stakingAddress();
 
-        uint256 length = mmfTokenAddresses.length;
         address[] memory vaultAddresses = addressFactory.getVaultAddresses();
         address[] memory vaultImplAddresses = addressFactory
             .getVaultImplAddresses();
@@ -65,16 +78,10 @@ contract MMFVaultDeployFactory is IDeployFactory {
         for (uint i; i < length; ++i) {
             bytes32 salt = mmfVaultSalts[i];
             uint256 saltIndex = addressFactory.saltIndexMap(salt);
-            if (saltIndex == 0) {
-                revert InvaildParams();
-            }
             uint256 index = saltIndex - 1;
             address mmfTokenAddress = mmfTokenAddresses[i];
             address pricerAddress = pricerAddresses[i];
 
-            if (mmfTokenAddress == address(0) || pricerAddress == address(0)) {
-                revert ZeroAddress();
-            }
             // --------------------
             // Deploy MMFVault implementation contract
             // --------------------
