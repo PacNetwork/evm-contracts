@@ -498,8 +498,6 @@ export async function deploy(useCache: boolean = true) {
       console.log("Calling StakingDeployFactory.deployContracts method...");
       console.log(`Expected Address: ${await addressFactory.stakingAddress()}`);
       const stakingProxy = await stakingDeployFactory.deployContracts(
-        pricerAddresses,
-        mmfTokenAddresses,
         deployer.address,
         upgraderAddress,
         stakingReserveAddress,

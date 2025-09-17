@@ -18,8 +18,6 @@ contract StakingDeployFactory is IDeployFactory {
 
     /**
      * @notice Deploys PacUSDStaking contracts with UUPS proxies using CREATE2, incorporating msg.sender in salt
-     * @param pricerAddresses Address of the pricer contract
-     * @param mmfTokenAddresses Address of the mmftoken contract
      * @param admin Address to assign admin roles for PacUSDStaking
      * @param upgrader Address for upgrade administration
      * @param reserveAddress Address to assign Reserve roles for reserve
@@ -27,8 +25,6 @@ contract StakingDeployFactory is IDeployFactory {
      * @return pacUsdStakingProxy Address of the deployed PacUSDStaking proxy
      */
     function deployContracts(
-        address[] memory pricerAddresses,
-        address[] memory mmfTokenAddresses,
         address admin,
         address upgrader,
         address reserveAddress,
@@ -37,8 +33,6 @@ contract StakingDeployFactory is IDeployFactory {
         if (msg.sender != owner) revert NotOwner();
         // Input validation
         if (
-            mmfTokenAddresses.length != pricerAddresses.length ||
-            mmfTokenAddresses.length == 0 ||
             admin == address(0) ||
             reserveAddress == address(0) ||
             upgrader == address(0)

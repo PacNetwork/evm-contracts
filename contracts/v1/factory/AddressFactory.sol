@@ -10,7 +10,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
  */
 contract AddressFactory {
     error NotOwner();
-    error InvaildParams();
+    error InvalidParams();
+    error SaltAlreadyExists(bytes32 salt);
 
     address[] public vaultAddresses;
     address[] public vaultImplAddresses;
@@ -28,7 +29,7 @@ contract AddressFactory {
 
     // @dev Hash of the MMFVault contract bytecode
     bytes32 immutable vaultHash;
-    // @dev Salt used for deterministic deployment of MMFVault
+    // @dev Hash of the PacUSD contract bytecode
     bytes32 immutable pacUSDHash;
     // @dev Salt used for deterministic deployment of PacUSD
     bytes32 immutable pacUSDSalt;
@@ -94,11 +95,16 @@ contract AddressFactory {
         bytes32[] memory salts
     ) external {
         if (msg.sender != owner) revert NotOwner();
-        if (salts.length == 0) revert InvaildParams();
-        uint256 count = vaultAddresses.length;
+        if (salts.length == 0) revert InvalidParams();
+        uint256 count = vaultAddresses.length + 1;
         uint256 length = salts.length;
         for (uint i; i < length; ++i) {
             bytes32 salt = salts[i];
+
+            if (saltIndexMap[salt] != 0) {
+                revert SaltAlreadyExists(salt);
+            }
+
             (address vaultAddress, address vaultImplAddress) = _computeAddress(
                 salt,
                 vaultHash,

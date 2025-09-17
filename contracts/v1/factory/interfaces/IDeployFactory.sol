@@ -5,7 +5,7 @@ interface IDeployFactory {
     // Event emitted upon successful deployment
     event ContractsDeployed(address indexed sender, address proxy,address implment);
     // Errors
-    error InvaildParams();
+    error InvalidParams();
     error DeploymentFailed();
     error ZeroAddress();
     error InitializationFailed();

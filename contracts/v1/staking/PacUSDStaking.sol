@@ -47,7 +47,11 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
     event Unstaked(address indexed user, uint256 amount);
     event Restaked(address indexed user, uint256 amount);
     event RewardClaimed(address indexed user, uint256 amount);
-    event RewardDistributed(address indexed updater, uint256 newReward, uint256 rewardRate);
+    event RewardDistributed(
+        address indexed updater,
+        uint256 newReward,
+        uint256 rewardRate
+    );
     event ReserveSet(address indexed reserve);
     event RewardSchemeAdded(address indexed scheme);
     event RewardSchemeRemoved(address indexed scheme);
@@ -115,7 +119,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         if (schemeIndexMap[scheme] != 0)
             revert RewardSchemeAlreadyAdded(scheme);
 
-        if (rewardSchemes.length > MAX_REWARD_SCHEMES) {
+        if (rewardSchemes.length >= MAX_REWARD_SCHEMES) {
             revert RewardSchemeArrayTooLong();
         }
         // add the scheme
@@ -151,7 +155,8 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
 
     function setReserve(address reserve) external onlyRole(RESERVE_SET_ROLE) {
         if (reserve == address(0)) revert ZeroAddress();
-
+        if (reserve == RESERVE) revert NewReserveAlreadyHasRole(reserve);
+        if (rewardBalances[reserve] > 0) revert NewReserveHasRewards(reserve);
         uint256 accumulated = rewardBalances[RESERVE];
         rewardBalances[RESERVE] = 0;
 
@@ -408,8 +413,7 @@ contract PacUSDStaking is BaseStaking, IPacUSDStaking {
         uint256 newReward,
         uint256 totalSupply
     ) internal view virtual returns (uint256) {
-        return
-            (newReward * RATE_PRECISION) / totalSupply;
+        return (newReward * RATE_PRECISION) / totalSupply;
     }
 
     function _calculateReserveInc(
