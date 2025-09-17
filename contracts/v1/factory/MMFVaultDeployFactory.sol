@@ -68,7 +68,7 @@ contract MMFVaultDeployFactory is IDeployFactory {
         }
 
         // Retrieve related contract addresses from AddressFactory
-        address pacUSDAInvalidParamsessFactory.pacUSDAddress();
+        address pacUSDAddress = addressFactory.pacUSDAddress();
         address stakingAddress = addressFactory.stakingAddress();
 
         address[] memory vaultAddresses = addressFactory.getVaultAddresses();
