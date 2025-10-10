@@ -40,28 +40,6 @@ This separation of concerns provides:
 - **Regulatory compliance**: Two-party validation for token issuance
 - **Attack mitigation**: Compromised minter cannot unilaterally mint tokens
 
-### Transaction ID Generation
-
-Each mint/burn transaction requires a unique `txId` generated as:
-
-```solidity
-// For MMFVault operations (both mint and redeem)
-txId = keccak256(abi.encode(
-    block.chainid,           // The current blockchain identifier
-    address(this),           // The MMFVault contract address
-    sender,                  // The user initiating the mint operation via the vault
-    amount,                  // The amount to be swapped
-    to,                      // The recipient address
-    timestamp                // The time the transaction is requested
-))
-```
-
-This ensures:
-- **Uniqueness**: Same transaction cannot be executed twice (timestamp prevents replay)
-- **Chain-specific**: `block.chainid` protects against cross-chain replay attacks
-- **Contract-specific**: `address(this)` binds txId to specific vault contract
-- **Binding**: Links approval to specific sender, amount, recipient, and time
-
 ### Transaction States
 
 Each `txId` has one of four states:
