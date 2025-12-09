@@ -147,7 +147,7 @@ abstract contract BaseFuzz {
         address[] memory minters = new address[](2);
         minters[0] = address(vaultProxy);
         minters[1] = address(vault2Proxy);
-        pacUSD.initialize(OWNER, UPGRADER, minters);
+        pacUSD.initialize(OWNER, UPGRADER, minters, "PAC USD Stablecoin", "PacUSD");
 
         vault.initialize(
             address(mmfToken),

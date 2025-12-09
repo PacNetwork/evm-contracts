@@ -97,6 +97,10 @@ export async function deploy(useCache: boolean = true) {
   //global
   const upgraderAddress = process.env.UPGRADER_ADDRESS || "";
   const adminAddress = process.env.ADMIN_ADDRESS || "";
+
+  // PacUSD Token Configuration
+  const pacUSDTokenName = process.env.PACUSD_TOKEN_NAME;
+  const pacUSDTokenSymbol = process.env.PACUSD_TOKEN_SYMBOL;
   //pacusd
   const pacUSDPauserAddress = process.env.PACUSD_PAUSER_ADDRESS || "";
   const pacUSDApproverAddress = process.env.PACUSD_APPROVER_ADDRESS || "";
@@ -123,6 +127,8 @@ export async function deploy(useCache: boolean = true) {
   console.log(`MMFTOKEN_ADDRESS: ${mmfTokenAddress}`);
   console.log(`UPGRADER_ADDRESS: ${upgraderAddress}`);
   console.log(`OWNER_ADDRESS: ${adminAddress}`);
+  console.log(`PACUSD_TOKEN_NAME: ${pacUSDTokenName}`);
+  console.log(`PACUSD_TOKEN_SYMBOL: ${pacUSDTokenSymbol}`);
   console.log(`PacUSD Permission:`);
   console.log(`-- PAUSER_ADDRESS: ${pacUSDPauserAddress}`);
   console.log(`-- RESCUER_ADDRESS: ${pacUSDRescuerAddress}`);
@@ -184,10 +190,13 @@ export async function deploy(useCache: boolean = true) {
     STAKING_PAUSER_ROLE: stakingPauserAddress,
     RESERVE_SET_ROLE: stakingReserveSetAddress,
     REWARD_SCHEME_ROLE: stakingRewardSchemeAddress,
+    //PacUSD Token Configuration
+    PACUSD_TOKEN_NAME: pacUSDTokenName,
+    PACUSD_TOKEN_SYMBOL: pacUSDTokenSymbol,
   };
 
   const missingVariables = Object.entries(requiredVariables)
-    .filter(([key, value]) => value.length === 0)
+    .filter(([key, value]) => !value || (typeof value === 'string' && value.length === 0))
     .map(([key]) => key);
 
   if (missingVariables.length > 0) {
@@ -460,10 +469,14 @@ export async function deploy(useCache: boolean = true) {
 
       console.log("Calling PacUSDDeployFactory.deployContracts method...");
       console.log(`Expected Address: ${await addressFactory.pacUSDAddress()}`);
+      console.log(`Token Name: ${pacUSDTokenName}`);
+      console.log(`Token Symbol: ${pacUSDTokenSymbol}`);
       const pacUSDProxy = await pacUSDDeployFactory.deployContracts(
         deployer.address,
         upgraderAddress,
-        pacUSDSalt
+        pacUSDSalt,
+        pacUSDTokenName,
+        pacUSDTokenSymbol
       );
       console.log(`Trasncation Hash:${pacUSDProxy.hash}`);
       await pacUSDProxy.wait();

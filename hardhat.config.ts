@@ -75,9 +75,9 @@ const config: HardhatUserConfig = {
       accounts: [],
     },
     mainnet: {
-      url: "",
-      chainId: 0,
-      accounts: [],
+      url: "https://ethereum-rpc.publicnode.com",
+      chainId: 1,
+      accounts: [DEPLOY_PRIVATE_KEY],
     },
   },
 };

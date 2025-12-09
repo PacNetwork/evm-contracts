@@ -60,19 +60,23 @@ contract PacUSD is
      * @param admin Address to assign admin
      * @param upgrader The address to upgrade contract
      * @param minters An array of addresses to be granted minter privileges.
+     * @param name Token name for ERC20
+     * @param symbol Token symbol for ERC20
      */
     function initialize(
         address admin,
         address upgrader,
-        address[] memory minters
+        address[] memory minters,
+        string memory name,
+        string memory symbol
     ) public initializer {
         if (
             admin == address(0) ||
             upgrader == address(0) ||
             minters.length == 0
         ) revert ZeroAddress();
-        __ERC20_init("PAC USD Stablecoin", "PacUSD");
-        __ERC20Permit_init("PAC USD Stablecoin");
+        __ERC20_init(name, symbol);
+        __ERC20Permit_init(name);
         __ReentrancyGuard_init();
         __Pausable_init();
         __AccessControl_init();

@@ -84,7 +84,7 @@ describe("MMFVault", () => {
     await MMFVault.grantRole(await MMFVault.MINT_REWARD_ROLE(), owner.address);
 
     // Initialize PacUSD with MMFVault as minter
-    await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target]);
+    await PacUSD.initialize(owner.address, upgrader.address, [MMFVault.target], "PAC USD Stablecoin", "PacUSD");
 
     await PacUSD.grantRole(await PacUSD.PAUSER_ROLE(), owner.address);
     await PacUSD.grantRole(await PacUSD.BLOCKLISTER_ROLE(), owner.address);

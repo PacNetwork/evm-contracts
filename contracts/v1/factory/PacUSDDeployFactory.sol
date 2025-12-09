@@ -31,12 +31,16 @@ contract PacUSDDeployFactory is IDeployFactory {
      * @param admin Address to assign admin of PacUSD
      * @param upgrader Address for upgrade administration
      * @param pacUSDSalt Salt for CREATE2 deterministic address calculation
+     * @param name Token name for ERC20
+     * @param symbol Token symbol for ERC20
      * @return pacUSDProxy Address of the deployed PacUSD proxy contract
      */
     function deployContracts(
         address admin,
         address upgrader,
-        bytes32 pacUSDSalt
+        bytes32 pacUSDSalt,
+        string calldata name,
+        string calldata symbol
     ) external returns (address pacUSDProxy) {
         if (msg.sender != owner) revert NotOwner();
         // --------------------
@@ -91,7 +95,7 @@ contract PacUSDDeployFactory is IDeployFactory {
         (bool success, ) = pacUSDProxy.call(
             abi.encodeCall(
                 PacUSD.initialize,
-                (admin, upgrader, vaultAddresses)
+                (admin, upgrader, vaultAddresses, name, symbol)
             )
         );
         if (!success) revert InitializationFailed();
