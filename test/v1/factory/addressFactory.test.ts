@@ -167,9 +167,7 @@ describe("AddressFactory", () => {
     let tx = await pacUSDDeployFactory.deployContracts(
       vaultFactoryAddress, // Address of the Vault factory
       admin, // admin of the PacUSD contract
-      pacUSDSalt, // Salt for Create2 deployment
-      "PAC USD Stablecoin", // Token name
-      "PacUSD" // Token symbol
+      pacUSDSalt // Salt for Create2 deployment
     );
     await tx.wait();
 
